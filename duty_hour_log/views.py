@@ -38,7 +38,6 @@ def log_list(request):
     except Exception as e:
         # Log any unexpected errors during pagination
         print(f"--- ERROR during pagination setup: {e} ---") # DEBUG
-        # page_obj remains None or could be partially formed, template needs to handle this
 
     context = {
         'page_obj': page_obj, # Pass the potentially None or valid page_obj
