@@ -2,6 +2,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import DutyHourLog
 from .forms import DutyHourLogForm
+from datetime import date # <--- Import date
+
 # Optional: If you want success messages
 # from django.contrib import messages
 
@@ -19,15 +21,19 @@ def log_list(request):
             return redirect('log_list')
         # If form is invalid, the request proceeds to the GET section below,
         # and the 'form' variable containing errors will be passed to the template.
+        # *** NOTE: We DON'T set initial data here, to preserve user input on error ***
     else: # Handle initial page load (GET request)
-        form = DutyHourLogForm() # Create an empty form instance
+        # --- MODIFIED LINE ---
+        # Create a form instance with the 'date' field pre-filled with today's date
+        form = DutyHourLogForm(initial={'date': date.today()})
+        # --- END MODIFICATION ---
 
     # Fetch all logs for display (always needed, for GET or POST)
-    logs = DutyHourLog.objects.all() # Consider pagination for many logs
+    logs = DutyHourLog.objects.all().order_by('-date', '-start_time') # Added ordering for consistency
 
     context = {
         'logs': logs,
-        'form': form, # Pass the form (empty or with errors) to the template
+        'form': form, # Pass the form (empty/initial or with errors) to the template
     }
     return render(request, 'duty_hour_log/log_list.html', context)
 
@@ -36,10 +42,6 @@ def log_detail(request, pk):
     log = get_object_or_404(DutyHourLog, pk=pk)
     context = {'log': log}
     return render(request, 'duty_hour_log/log_detail.html', context)
-
-# Create View - THIS FUNCTION IS NO LONGER NEEDED as logic is merged into log_list
-# def log_create(request):
-#     # ... (Keep commented out or delete) ...
 
 # Update View - NO CHANGES NEEDED
 def log_update(request, pk):
@@ -51,7 +53,7 @@ def log_update(request, pk):
             # messages.success(request, 'Duty hour log updated successfully!')
             return redirect('log_detail', pk=log_instance.pk) # Redirect to detail view
     else: # GET request
-        form = DutyHourLogForm(instance=log_instance)
+        form = DutyHourLogForm(instance=log_instance) # No initial date needed here, uses instance data
 
     # Use the existing log_form.html template, but provide a different title
     context = {'form': form, 'log_instance': log_instance, 'form_title': 'Edit Duty Log'}

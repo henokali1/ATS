@@ -4,25 +4,64 @@
 {% block title %}Log Detail: {{ log.date }}{% endblock %}
 
 {% block content %}
-    <h2>Log Detail - {{ log.date|date:"Y-m-d" }} / {{ log.initial.code }}</h2>
-    <p><strong>Operation Type:</strong> {{ log.get_op_display }}</p>
-    <p><strong>Date:</strong> {{ log.date|date:"Y-m-d" }}</p>
-    <p><strong>Start Time:</strong> {{ log.start_time|time:"H:i" }}</p>
-    <p><strong>Finish Time:</strong> {{ log.finish_time|time:"H:i" }}</p>
-    <p><strong>Rating:</strong> {{ log.get_rating_display }}</p>
-    <p><strong>Initial (Controller/Student):</strong> {{ log.initial.code }} {% if log.initial.full_name %}({{ log.initial.full_name }}){% endif %}</p>
+     <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <h2 class="mb-3"><i class="fas fa-info-circle"></i> Log Detail</h2>
+            <div class="card">
+                 <div class="card-header">
+                    {{ log.date|date:"Y-m-d" }} - {{ log.get_op_display }}
+                 </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Operation Type:</dt>
+                        <dd class="col-sm-8">{{ log.get_op_display }}</dd>
 
-    {# --- Display New Fields --- #}
-    <p><strong>OJTI:</strong> {% if log.ojti %}{{ log.ojti.code }} {% if log.ojti.full_name %}({{ log.ojti.full_name }}){% endif %}{% else %}N/A{% endif %}</p>
-    <p><strong>Examiner/Assessor:</strong> {% if log.examiner %}{{ log.examiner.code }} {% if log.examiner.full_name %}({{ log.examiner.full_name }}){% endif %}{% else %}N/A{% endif %}</p>
-    {# <p><strong>Trainee:</strong> {% if log.trainee %}{{ log.trainee.code }} {% if log.trainee.full_name %}({{ log.trainee.full_name }}){% endif %}{% else %}N/A{% endif %}</p> #}
-    {# --- End Display New Fields --- #}
+                        <dt class="col-sm-4">Date:</dt>
+                        <dd class="col-sm-8">{{ log.date|date:"Y-m-d" }}</dd>
 
-    <p><strong>Remarks:</strong> {{ log.remarks|default:"N/A"|linebreaksbr }}</p>
-    <p><small>Created: {{ log.created_at }} | Updated: {{ log.updated_at }}</small></p>
+                        <dt class="col-sm-4">Start Time:</dt>
+                        <dd class="col-sm-8">{{ log.start_time|time:"H:i" }}</dd>
 
-    <hr>
-    <a href="{% url 'log_update' log.pk %}" class="btn">Edit Entry</a>
-    <a href="{% url 'log_delete' log.pk %}" class="btn btn-danger">Delete Entry</a>
-    <a href="{% url 'log_list' %}" class="btn btn-secondary">Back to List</a>
+                        <dt class="col-sm-4">Finish Time:</dt>
+                        <dd class="col-sm-8">{{ log.finish_time|time:"H:i" }}</dd>
+
+                        <dt class="col-sm-4">Rating:</dt>
+                        <dd class="col-sm-8">{{ log.get_rating_display }}</dd>
+
+                        {% if log.initial %}
+                        <dt class="col-sm-4">Initial (Solo):</dt>
+                        <dd class="col-sm-8">{{ log.initial.code }} {% if log.initial.full_name %}({{ log.initial.full_name }}){% endif %}</dd>
+                        {% endif %}
+
+                        {% if log.trainee %}
+                        <dt class="col-sm-4">Trainee:</dt> {# Corrected display #}
+                        <dd class="col-sm-8">{{ log.trainee.code }} {% if log.trainee.full_name %}({{ log.trainee.full_name }}){% endif %}</dd>
+                        {% endif %}
+
+                        {% if log.ojti %}
+                        <dt class="col-sm-4">OJTI:</dt>
+                        <dd class="col-sm-8">{{ log.ojti.code }} {% if log.ojti.full_name %}({{ log.ojti.full_name }}){% endif %}</dd>
+                        {% endif %}
+
+                        {% if log.examiner %}
+                        <dt class="col-sm-4">Examiner:</dt>
+                        <dd class="col-sm-8">{{ log.examiner.code }} {% if log.examiner.full_name %}({{ log.examiner.full_name }}){% endif %}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-4">Remarks:</dt>
+                        <dd class="col-sm-8">{{ log.remarks|default:"N/A"|linebreaksbr }}</dd>
+
+                        <dt class="col-sm-4 text-muted">Created:</dt>
+                        <dd class="col-sm-8 text-muted"><small>{{ log.created_at }}</small></dd>
+                        <dt class="col-sm-4 text-muted">Updated:</dt>
+                        <dd class="col-sm-8 text-muted"><small>{{ log.updated_at }}</small></dd>
+                    </dl>
+                     <hr>
+                    <a href="{% url 'log_update' log.pk %}" class="btn btn-warning"><i class="fas fa-edit"></i> Edit Entry</a>
+                    <a href="{% url 'log_delete' log.pk %}" class="btn btn-danger"><i class="fas fa-trash"></i> Delete Entry</a>
+                    <a href="{% url 'log_list' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}

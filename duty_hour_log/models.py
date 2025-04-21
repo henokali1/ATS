@@ -23,10 +23,10 @@ class DutyHourLog(models.Model):
         ('Assessment', 'Assessment'),
     ]
     RATING_CHOICES = [
-        ('ADC', 'Aerodrome Control (ADC)'),
-        ('APP', 'Approach Control Procedural (APP)'),
-        ('APS', 'Approach Control Surveillance (APS)'),
-        ('ATCA', 'Area Control Procedural (ATCA)'),
+        ('ADC', 'ADC'),
+        ('APP', 'APP'),
+        ('APS', 'APS'),
+        ('ATCA', 'ATCA'),
     ]
 
     op = models.CharField(
@@ -63,7 +63,7 @@ class DutyHourLog(models.Model):
         on_delete=models.PROTECT,
         null=True,
         blank=True,
-        verbose_name="Examiner/Assessor",
+        verbose_name="Examiner",
         related_name='duty_logs_as_examiner',
         help_text="Select for Assessment operations."
     )

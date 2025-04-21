@@ -1,24 +1,148 @@
 <!-- duty_hour_log/templates/duty_hour_log/log_form.html -->
 {% extends 'duty_hour_log/base.html' %}
 
-{% block title %}{{ form_title }}{% endblock %}
+{% block title %}{{ form_title|default:"Log Form" }}{% endblock %}
 
 {% block content %}
-    <h2>{{ form_title }}</h2>
-    <form method="post">
-        {% csrf_token %} {# IMPORTANT: Security feature #}
+     <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <h2 class="mb-4"><i class="fas fa-edit"></i> {{ form_title|default:"Edit Log Entry" }}</h2>
 
-        {# Render form fields - using as_p assumes it includes the new fields #}
-        {{ form.as_p }}
+             {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Please correct the errors below:</strong>
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field|title }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
 
-        {# If rendering manually, ensure ojti, examiner fields are included in the loop #}
-        {# {% for field in form %} ... {% endfor %} #}
+            <form method="post">
+                {% csrf_token %}
 
-        <button type="submit" class="btn">Save Entry</button>
-        {% if log_instance %}
-            <a href="{% url 'log_detail' log_instance.pk %}" class="btn btn-secondary">Cancel</a>
-        {% else %}
-             <a href="{% url 'log_list' %}" class="btn btn-secondary">Cancel</a>
-        {% endif %}
-    </form>
+                 <div class="row g-3">
+                    <div class="col-md-6 form-field-wrapper">
+                        {{ form.op.label_tag }}{{ form.op }}
+                        {% if form.op.errors %}<div class="invalid-feedback d-block">{{ form.op.errors }}</div>{% endif %}
+                    </div>
+                     <div class="col-md-6 form-field-wrapper">
+                        {{ form.rating.label_tag }} {{ form.rating }}
+                        {% if form.rating.errors %}<div class="invalid-feedback d-block">{{ form.rating.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4 form-field-wrapper">
+                        {{ form.date.label_tag }} {{ form.date }}
+                        {% if form.date.errors %}<div class="invalid-feedback d-block">{{ form.date.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4 form-field-wrapper">
+                        {{ form.start_time.label_tag }} {{ form.start_time }}
+                        {% if form.start_time.errors %}<div class="invalid-feedback d-block">{{ form.start_time.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4 form-field-wrapper">
+                        {{ form.finish_time.label_tag }} {{ form.finish_time }}
+                        {% if form.finish_time.errors %}<div class="invalid-feedback d-block">{{ form.finish_time.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-6 form-field-wrapper" id="p_id_initial"> {# No initial style="display: none;" #}
+                        {{ form.initial.label_tag }} {{ form.initial }}
+                        <small class="form-text text-muted">{{ form.initial.help_text }}</small>
+                        {% if form.initial.errors %}<div class="invalid-feedback d-block">{{ form.initial.errors }}</div>{% endif %}
+                    </div>
+                     <div class="col-md-6 form-field-wrapper" id="p_id_trainee"> {# No initial style="display: none;" #}
+                        {{ form.trainee.label_tag }} {{ form.trainee }}
+                        <small class="form-text text-muted">{{ form.trainee.help_text }}</small>
+                        {% if form.trainee.errors %}<div class="invalid-feedback d-block">{{ form.trainee.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6 form-field-wrapper" id="p_id_ojti"> {# No initial style="display: none;" #}
+                        {{ form.ojti.label_tag }} {{ form.ojti }}
+                        <small class="form-text text-muted">{{ form.ojti.help_text }}</small>
+                        {% if form.ojti.errors %}<div class="invalid-feedback d-block">{{ form.ojti.errors }}</div>{% endif %}
+                    </div>
+                     <div class="col-md-6 form-field-wrapper" id="p_id_examiner"> {# No initial style="display: none;" #}
+                        {{ form.examiner.label_tag }} {{ form.examiner }}
+                        <small class="form-text text-muted">{{ form.examiner.help_text }}</small>
+                        {% if form.examiner.errors %}<div class="invalid-feedback d-block">{{ form.examiner.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-12 form-field-wrapper">
+                        {{ form.remarks.label_tag }} {{ form.remarks }}
+                        {% if form.remarks.errors %}<div class="invalid-feedback d-block">{{ form.remarks.errors }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3"><i class="fas fa-save"></i> Save Changes</button>
+                {% if log_instance %}
+                    <a href="{% url 'log_detail' log_instance.pk %}" class="btn btn-secondary mt-3"><i class="fas fa-times-circle"></i> Cancel</a>
+                {% else %}
+                     <a href="{% url 'log_list' %}" class="btn btn-secondary mt-3"><i class="fas fa-times-circle"></i> Cancel</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script> // Slightly different logic for update form - doesn't clear fields on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const opSelect = document.getElementById('id_op');
+        const initialWrapper = document.getElementById('p_id_initial');
+        const ojtiWrapper = document.getElementById('p_id_ojti');
+        const examinerWrapper = document.getElementById('p_id_examiner');
+        const traineeWrapper = document.getElementById('p_id_trainee');
+
+        const initialField = document.getElementById('id_initial');
+        const ojtiField = document.getElementById('id_ojti');
+        const examinerField = document.getElementById('id_examiner');
+        const traineeField = document.getElementById('id_trainee');
+
+        function toggleFields(isInitialLoad = false) {
+            const selectedOp = opSelect.value;
+
+            // Hide all optional fields first
+            if (initialWrapper) initialWrapper.style.display = 'none';
+            if (ojtiWrapper) ojtiWrapper.style.display = 'none';
+            if (examinerWrapper) examinerWrapper.style.display = 'none';
+            if (traineeWrapper) traineeWrapper.style.display = 'none';
+
+             // Clear values only if the op type is changed *by the user*, not on initial load or subsequent changes on the *edit* form
+             // Only clear if the op_type changes *after* the initial load
+             if (!isInitialLoad) {
+                 // Clear fields that are *currently* hidden when OP changes
+                 if (initialField && initialWrapper.style.display === 'none') initialField.value = '';
+                 if (ojtiField && ojtiWrapper.style.display === 'none') ojtiField.value = '';
+                 if (examinerField && examinerWrapper.style.display === 'none') examinerField.value = '';
+                 if (traineeField && traineeWrapper.style.display === 'none') traineeField.value = '';
+             }
+
+            // Show relevant fields based on selection
+            if (selectedOp === 'Solo') {
+                if (initialWrapper) initialWrapper.style.display = 'block';
+            } else if (selectedOp === 'OJT') {
+                if (ojtiWrapper) ojtiWrapper.style.display = 'block';
+                if (traineeWrapper) traineeWrapper.style.display = 'block';
+            } else if (selectedOp === 'Assessment') {
+                if (ojtiWrapper) ojtiWrapper.style.display = 'block';
+                if (examinerWrapper) examinerWrapper.style.display = 'block';
+                if (traineeWrapper) traineeWrapper.style.display = 'block';
+            }
+        }
+
+        if (opSelect) {
+            opSelect.addEventListener('change', () => toggleFields(false)); // Pass false for user change
+            toggleFields(true); // Initial call on page load for edit form, pass true
+        }
+
+         // Add Bootstrap classes to form elements dynamically
+        const form = document.querySelector('form');
+        if(form) {
+            form.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=button]):not([type=submit])').forEach(el => el.classList.add('form-control'));
+            form.querySelectorAll('select').forEach(el => el.classList.add('form-select'));
+            form.querySelectorAll('textarea').forEach(el => el.classList.add('form-control'));
+            form.querySelectorAll('label').forEach(el => el.classList.add('form-label'));
+        }
+    });
+</script>
 {% endblock %}

@@ -1,90 +1,190 @@
-<!-- duty_hour_log/templates/duty_hour_log/log_form.html -->
+<!-- duty_hour_log/templates/duty_hour_log/log_list.html -->
 {% extends 'duty_hour_log/base.html' %}
 
-{% block title %}{{ form_title }}{% endblock %}
+{% block title %}Duty Logs{% endblock %}
 
 {% block content %}
-    <h2>{{ form_title }}</h2>
-    <form method="post">
-        {% csrf_token %}
+    <div class="row">
+        <div class="col-lg-8 offset-lg-2">
+            <h2 class="mb-4"><i class="fas fa-clipboard-list"></i> Duty Hour Logs</h2>
 
-        <div id="p_id_op" class="form-field-wrapper">{{ form.op.label_tag }} {{ form.op }} {{ form.op.errors }}</div>
-        <div id="p_id_date" class="form-field-wrapper">{{ form.date.label_tag }} {{ form.date }} {{ form.date.errors }}</div>
-        <div id="p_id_start_time" class="form-field-wrapper">{{ form.start_time.label_tag }} {{ form.start_time }} {{ form.start_time.errors }}</div>
-        <div id="p_id_finish_time" class="form-field-wrapper">{{ form.finish_time.label_tag }} {{ form.finish_time }} {{ form.finish_time.errors }}</div>
-        <div id="p_id_rating" class="form-field-wrapper">{{ form.rating.label_tag }} {{ form.rating }} {{ form.rating.errors }}</div>
-
-        <div id="p_id_initial" class="form-field-wrapper">{{ form.initial.label_tag }} {{ form.initial }} {{ form.initial.help_text }} {{ form.initial.errors }}</div>
-        <div id="p_id_trainee" class="form-field-wrapper">{{ form.trainee.label_tag }} {{ form.trainee }} {{ form.trainee.help_text }} {{ form.trainee.errors }}</div>
-        <div id="p_id_ojti" class="form-field-wrapper">{{ form.ojti.label_tag }} {{ form.ojti }} {{ form.ojti.help_text }} {{ form.ojti.errors }}</div>
-        <div id="p_id_examiner" class="form-field-wrapper">{{ form.examiner.label_tag }} {{ form.examiner }} {{ form.examiner.help_text }} {{ form.examiner.errors }}</div>
-
-        <div id="p_id_remarks" class="form-field-wrapper">{{ form.remarks.label_tag }} {{ form.remarks }} {{ form.remarks.errors }}</div>
-
-        <style> /* Same style as in log_list.html for consistency */
-            .form-field-wrapper { margin-bottom: 10px; }
-            .form-field-wrapper label { display: block; font-weight: bold; }
-            .form-field-wrapper select,
-            .form-field-wrapper input,
-            .form-field-wrapper textarea { width: 90%; max-width: 400px; padding: 5px; }
-            .form-field-wrapper small { color: #555; font-size: 0.9em;}
-        </style>
-
-        <button type="submit" class="btn">Save Entry</button>
-        {% if log_instance %}
-            <a href="{% url 'log_detail' log_instance.pk %}" class="btn btn-secondary">Cancel</a>
-        {% else %}
-             <a href="{% url 'log_list' %}" class="btn btn-secondary">Cancel</a>
-        {% endif %}
-    </form>
-
-    <script> // Same JavaScript as in log_list.html
-        document.addEventListener('DOMContentLoaded', function() {
-            const opSelect = document.getElementById('id_op');
-            const initialWrapper = document.getElementById('p_id_initial');
-            const ojtiWrapper = document.getElementById('p_id_ojti');
-            const examinerWrapper = document.getElementById('p_id_examiner');
-            const traineeWrapper = document.getElementById('p_id_trainee');
-
-            const initialField = document.getElementById('id_initial');
-            const ojtiField = document.getElementById('id_ojti');
-            const examinerField = document.getElementById('id_examiner');
-            const traineeField = document.getElementById('id_trainee');
-
-            function toggleFields() {
-                const selectedOp = opSelect.value;
-
-                if (initialWrapper) initialWrapper.style.display = 'none';
-                if (ojtiWrapper) ojtiWrapper.style.display = 'none';
-                if (examinerWrapper) examinerWrapper.style.display = 'none';
-                if (traineeWrapper) traineeWrapper.style.display = 'none';
-
-                 // Do NOT clear values for the update form initially,
-                 // as they should be pre-filled. Clearing happens on 'change'.
-                 // However, if op_type changes, then hidden fields should be cleared.
-                 if (event && event.type === 'change') { // only clear if op_type is actively changed
-                     if (initialField && initialWrapper.style.display === 'none') initialField.value = '';
-                     if (ojtiField && ojtiWrapper.style.display === 'none') ojtiField.value = '';
-                     if (examinerField && examinerWrapper.style.display === 'none') examinerField.value = '';
-                     if (traineeField && traineeWrapper.style.display === 'none') traineeField.value = '';
-                 }
+            {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Please correct the errors below:</strong>
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field|title }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
 
 
-                if (selectedOp === 'Solo') {
-                    if (initialWrapper) initialWrapper.style.display = 'block';
-                } else if (selectedOp === 'OJT') {
-                    if (ojtiWrapper) ojtiWrapper.style.display = 'block';
-                    if (traineeWrapper) traineeWrapper.style.display = 'block';
-                } else if (selectedOp === 'Assessment') {
-                    if (examinerWrapper) examinerWrapper.style.display = 'block';
-                    if (traineeWrapper) traineeWrapper.style.display = 'block';
-                }
+            <div class="card mb-4">
+                <div class="card-header">
+                   <i class="fas fa-plus-circle"></i> Add New Log Entry
+                </div>
+                <div class="card-body">
+                     <form method="post" action="{% url 'log_list' %}">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6 form-field-wrapper">
+                                {{ form.op.label_tag }}{{ form.op }}
+                                {% if form.op.errors %}<div class="invalid-feedback d-block">{{ form.op.errors }}</div>{% endif %}
+                            </div>
+                             <div class="col-md-6 form-field-wrapper">
+                                {{ form.rating.label_tag }} {{ form.rating }}
+                                {% if form.rating.errors %}<div class="invalid-feedback d-block">{{ form.rating.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 form-field-wrapper">
+                                {{ form.date.label_tag }} {{ form.date }}
+                                {% if form.date.errors %}<div class="invalid-feedback d-block">{{ form.date.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 form-field-wrapper">
+                                {{ form.start_time.label_tag }} {{ form.start_time }}
+                                {% if form.start_time.errors %}<div class="invalid-feedback d-block">{{ form.start_time.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 form-field-wrapper">
+                                {{ form.finish_time.label_tag }} {{ form.finish_time }}
+                                {% if form.finish_time.errors %}<div class="invalid-feedback d-block">{{ form.finish_time.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-md-6 form-field-wrapper" id="p_id_initial" style="display: none;">
+                                {{ form.initial.label_tag }} {{ form.initial }}
+                                <small class="form-text text-muted">{{ form.initial.help_text }}</small>
+                                {% if form.initial.errors %}<div class="invalid-feedback d-block">{{ form.initial.errors }}</div>{% endif %}
+                            </div>
+                             <div class="col-md-6 form-field-wrapper" id="p_id_trainee" style="display: none;">
+                                {{ form.trainee.label_tag }} {{ form.trainee }}
+                                <small class="form-text text-muted">{{ form.trainee.help_text }}</small>
+                                {% if form.trainee.errors %}<div class="invalid-feedback d-block">{{ form.trainee.errors }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 form-field-wrapper" id="p_id_ojti" style="display: none;">
+                                {{ form.ojti.label_tag }} {{ form.ojti }}
+                                <small class="form-text text-muted">{{ form.ojti.help_text }}</small>
+                                {% if form.ojti.errors %}<div class="invalid-feedback d-block">{{ form.ojti.errors }}</div>{% endif %}
+                            </div>
+                             <div class="col-md-6 form-field-wrapper" id="p_id_examiner" style="display: none;">
+                                {{ form.examiner.label_tag }} {{ form.examiner }}
+                                <small class="form-text text-muted">{{ form.examiner.help_text }}</small>
+                                {% if form.examiner.errors %}<div class="invalid-feedback d-block">{{ form.examiner.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="col-12 form-field-wrapper">
+                                {{ form.remarks.label_tag }} {{ form.remarks }}
+                                {% if form.remarks.errors %}<div class="invalid-feedback d-block">{{ form.remarks.errors }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success mt-3"><i class="fas fa-save"></i> Save Entry</button>
+                    </form>
+                </div>
+            </div>
+
+
+            <h3 class="mt-5 mb-3">Existing Logs</h3>
+            {% if logs %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-bordered caption-top">
+                        <caption>List of duty logs</caption>
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Start</th>
+                                <th>Finish</th>
+                                <th>Op</th>
+                                <th>Rating</th>
+                                <th>Initial</th>
+                                <th>Trainee</th>
+                                <th>OJTI</th>
+                                <th>Examiner</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                                <tr>
+                                    <td>{{ log.date|date:"d-M-Y" }}</td>
+                                    <td>{{ log.start_time|time:"H:i" }}</td>
+                                    <td>{{ log.finish_time|time:"H:i" }}</td>   
+                                    <td>{{ log.get_op_display }}</td>
+                                    <td>{{ log.get_rating_display }}</td>
+                                    <td>{{ log.initial.code|default:"-" }}</td>
+                                    <td>{{ log.trainee.code|default:"-" }}</td>
+                                    <td>{{ log.ojti.code|default:"-" }}</td>
+                                    <td>{{ log.examiner.code|default:"-" }}</td>  
+                                    <td>{{ log.remarks }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="alert alert-info">No duty hour logs found.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script> // Same JavaScript as before, should work with Bootstrap classes
+    document.addEventListener('DOMContentLoaded', function() {
+        const opSelect = document.getElementById('id_op');
+        const initialWrapper = document.getElementById('p_id_initial');
+        const ojtiWrapper = document.getElementById('p_id_ojti');
+        const examinerWrapper = document.getElementById('p_id_examiner');
+        const traineeWrapper = document.getElementById('p_id_trainee');
+
+        const initialField = document.getElementById('id_initial');
+        const ojtiField = document.getElementById('id_ojti');
+        const examinerField = document.getElementById('id_examiner');
+        const traineeField = document.getElementById('id_trainee');
+
+        function toggleFields(isInitialLoad = false) {
+            const selectedOp = opSelect.value;
+
+            // Hide all optional fields first
+            if (initialWrapper) initialWrapper.style.display = 'none';
+            if (ojtiWrapper) ojtiWrapper.style.display = 'none';
+            if (examinerWrapper) examinerWrapper.style.display = 'none';
+            if (traineeWrapper) traineeWrapper.style.display = 'none';
+
+            // Clear values only if the op type is changed *by the user*, not on initial load
+            if (!isInitialLoad) {
+                 if (initialField && initialWrapper.style.display === 'none') initialField.value = '';
+                 if (ojtiField && ojtiWrapper.style.display === 'none') ojtiField.value = '';
+                 if (examinerField && examinerWrapper.style.display === 'none') examinerField.value = '';
+                 if (traineeField && traineeWrapper.style.display === 'none') traineeField.value = '';
+             }
+
+            // Show relevant fields based on selection
+            if (selectedOp === 'Solo') {
+                if (initialWrapper) initialWrapper.style.display = 'block';
+            } else if (selectedOp === 'OJT') {
+                if (ojtiWrapper) ojtiWrapper.style.display = 'block';
+                if (traineeWrapper) traineeWrapper.style.display = 'block';
+            } else if (selectedOp === 'Assessment') {
+                // Show OJTI and Examiner for Assessment as per original JS logic, adjust if needed
+                if (ojtiWrapper) ojtiWrapper.style.display = 'block';
+                if (examinerWrapper) examinerWrapper.style.display = 'block';
+                if (traineeWrapper) traineeWrapper.style.display = 'block';
             }
+        }
 
-            if (opSelect) {
-                opSelect.addEventListener('change', toggleFields);
-                toggleFields(); // Initial call
-            }
-        });
-    </script>
+        if (opSelect) {
+            opSelect.addEventListener('change', () => toggleFields(false)); // Pass false for user change
+            toggleFields(true); // Initial call on page load, pass true
+        }
+
+        // Add Bootstrap classes to form elements dynamically (optional but good practice)
+        const form = document.querySelector('form');
+        if(form) {
+            form.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=button]):not([type=submit])').forEach(el => el.classList.add('form-control'));
+            form.querySelectorAll('select').forEach(el => el.classList.add('form-select'));
+            form.querySelectorAll('textarea').forEach(el => el.classList.add('form-control'));
+            form.querySelectorAll('label').forEach(el => el.classList.add('form-label'));
+        }
+    });
+</script>
 {% endblock %}

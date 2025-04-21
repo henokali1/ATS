@@ -4,15 +4,28 @@
 {% block title %}Confirm Deletion{% endblock %}
 
 {% block content %}
-    <h2>Confirm Deletion</h2>
-    <p>Are you sure you want to delete the following log entry?</p>
-    <p>
-        <strong>{{ log.date|date:"Y-m-d" }} - {{ log.initial.code }} - {{ log.get_op_display }} ({{ log.start_time|time:"H:i" }} - {{ log.finish_time|time:"H:i" }})</strong>
-    </p>
+     <div class="row">
+        <div class="col-lg-6 offset-lg-3">
+             <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <i class="fas fa-exclamation-triangle"></i> Confirm Deletion
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Are you sure you want to delete the following log entry?</p>
+                    <div class="alert alert-warning">
+                        <strong>{{ log.date|date:"Y-m-d" }} - {{ log.get_op_display }}</strong>
+                        {% if log.initial %} (Initial: {{ log.initial.code }}){% endif %}
+                        {% if log.trainee %} (Trainee: {{ log.trainee.code }}){% endif %}
+                         ({{ log.start_time|time:"H:i" }} - {{ log.finish_time|time:"H:i" }})
+                    </div>
 
-    <form method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Yes, Delete</button>
-        <a href="{% url 'log_detail' log.pk %}" class="btn btn-secondary">Cancel</a>
-    </form>
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger"><i class="fas fa-trash-alt"></i> Yes, Delete</button>
+                        <a href="{% url 'log_detail' log.pk %}" class="btn btn-secondary"><i class="fas fa-times-circle"></i> Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
