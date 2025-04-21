@@ -2,38 +2,47 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import DutyHourLog
 from .forms import DutyHourLogForm
-from datetime import date # <--- Import date
-
-# Optional: If you want success messages
-# from django.contrib import messages
+from datetime import date
+from django.core.paginator import Paginator
+from django.contrib import messages
 
 # List View (Read - All) & Create View Combined
 def log_list(request):
-    # Handle form submission (POST request)
+    print("--- Entering log_list view ---") # DEBUG
+
     if request.method == 'POST':
+        print("--- Handling POST request ---") # DEBUG
         form = DutyHourLogForm(request.POST)
         if form.is_valid():
             form.save()
-            # Optional: Add a success message
-            # messages.success(request, 'Duty hour log created successfully!')
-            # Redirect back to the SAME view (log_list) to show the updated list
-            # and prevent form resubmission on refresh (Post/Redirect/Get pattern)
             return redirect('log_list')
-        # If form is invalid, the request proceeds to the GET section below,
-        # and the 'form' variable containing errors will be passed to the template.
-        # *** NOTE: We DON'T set initial data here, to preserve user input on error ***
-    else: # Handle initial page load (GET request)
-        # --- MODIFIED LINE ---
-        # Create a form instance with the 'date' field pre-filled with today's date
+        else:
+            # If form is invalid on POST, we still need pagination for the list below
+            print("--- POST form invalid ---") # DEBUG
+            pass # Let execution continue to pagination logic
+    else: # GET request
+        print("--- Handling GET request ---") # DEBUG
         form = DutyHourLogForm(initial={'date': date.today()})
-        # --- END MODIFICATION ---
 
-    # Fetch all logs for display (always needed, for GET or POST)
-    logs = DutyHourLog.objects.all().order_by('-date', '-start_time') # Added ordering for consistency
+    # --- Pagination Logic ---
+    page_obj = None # Initialize page_obj to None
+    try:
+        log_list_all = DutyHourLog.objects.all().order_by('-date', '-start_time')       
+        paginator = Paginator(log_list_all, 10) # Show 10 logs per page.
+
+        page_number = request.GET.get('page')
+
+        page_obj = paginator.get_page(page_number) # Get the Page object for that number
+
+
+    except Exception as e:
+        # Log any unexpected errors during pagination
+        print(f"--- ERROR during pagination setup: {e} ---") # DEBUG
+        # page_obj remains None or could be partially formed, template needs to handle this
 
     context = {
-        'logs': logs,
-        'form': form, # Pass the form (empty/initial or with errors) to the template
+        'page_obj': page_obj, # Pass the potentially None or valid page_obj
+        'form': form,
     }
     return render(request, 'duty_hour_log/log_list.html', context)
 

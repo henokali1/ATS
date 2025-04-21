@@ -84,10 +84,13 @@
 
 
             <h3 class="mt-5 mb-3">Existing Logs</h3>
-            {% if logs %}
+            {% if page_obj.object_list %} {# Check if there are logs on the *current page* #}
+            {# ------------------- #}
                 <div class="table-responsive">
                     <table class="table table-striped table-hover table-bordered caption-top">
-                        <caption>List of duty logs</caption>
+                        <caption>
+                            List of duty logs (Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }})
+                        </caption>
                         <thead class="table-light">
                             <tr>
                                 <th>Date</th>
@@ -103,25 +106,86 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for log in logs %}
+                            {# Loop over page_obj - this is correct #}
+                            {% for log in page_obj %}
                                 <tr>
                                     <td>{{ log.date|date:"d-M-Y" }}</td>
                                     <td>{{ log.start_time|time:"H:i" }}</td>
-                                    <td>{{ log.finish_time|time:"H:i" }}</td>   
+                                    <td>{{ log.finish_time|time:"H:i" }}</td>
                                     <td>{{ log.get_op_display }}</td>
                                     <td>{{ log.get_rating_display }}</td>
                                     <td>{{ log.initial.code|default:"-" }}</td>
                                     <td>{{ log.trainee.code|default:"-" }}</td>
                                     <td>{{ log.ojti.code|default:"-" }}</td>
-                                    <td>{{ log.examiner.code|default:"-" }}</td>  
-                                    <td>{{ log.remarks }}</td>
+                                    <td>{{ log.examiner.code|default:"-" }}</td>
+                                    <td>{{ log.remarks|truncatewords:10 }}</td>
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+
+                {# --- PAGINATION CONTROLS --- #}
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="Log pagination">
+                    <ul class="pagination justify-content-center">
+                        {# Previous Button #}
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true">«</span> Previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link" aria-hidden="true">«</span> Previous
+                            </li>
+                        {% endif %}
+
+                        {# Page Numbers (Logic remains the same) #}
+                        {% for num in page_obj.paginator.page_range %}
+                             {% if page_obj.number == num %}
+                                <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                            {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                                {# Always show first and last page #}
+                                {% if num == 1 and page_obj.number > 4 %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                    {% if page_obj.number > 5 %}
+                                      <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% endif %}
+                                {% elif num == page_obj.paginator.num_pages and page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+                                    {% if page_obj.number < page_obj.paginator.num_pages|add:'-4' %}
+                                      <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% endif %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+
+
+                        {# Next Button #}
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                    Next <span aria-hidden="true">»</span>
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next <span aria-hidden="true">»</span></span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                {# --- END PAGINATION CONTROLS --- #}
+
             {% else %}
-                <p class="alert alert-info">No duty hour logs found.</p>
+                {# This message now correctly shows if page_obj.object_list is empty #}
+                {# It implies either no logs exist *at all*, or something went wrong fetching them #}
+                 <p class="alert alert-info">No duty hour logs found.</p>
             {% endif %}
         </div>
     </div>
