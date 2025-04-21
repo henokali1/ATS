@@ -1,0 +1,28 @@
+<!-- duty_hour_log/templates/duty_hour_log/log_detail.html -->
+{% extends 'duty_hour_log/base.html' %}
+
+{% block title %}Log Detail: {{ log.date }}{% endblock %}
+
+{% block content %}
+    <h2>Log Detail - {{ log.date|date:"Y-m-d" }} / {{ log.initial.code }}</h2>
+    <p><strong>Operation Type:</strong> {{ log.get_op_display }}</p>
+    <p><strong>Date:</strong> {{ log.date|date:"Y-m-d" }}</p>
+    <p><strong>Start Time:</strong> {{ log.start_time|time:"H:i" }}</p>
+    <p><strong>Finish Time:</strong> {{ log.finish_time|time:"H:i" }}</p>
+    <p><strong>Rating:</strong> {{ log.get_rating_display }}</p>
+    <p><strong>Initial (Controller/Student):</strong> {{ log.initial.code }} {% if log.initial.full_name %}({{ log.initial.full_name }}){% endif %}</p>
+
+    {# --- Display New Fields --- #}
+    <p><strong>OJTI:</strong> {% if log.ojti %}{{ log.ojti.code }} {% if log.ojti.full_name %}({{ log.ojti.full_name }}){% endif %}{% else %}N/A{% endif %}</p>
+    <p><strong>Examiner/Assessor:</strong> {% if log.examiner %}{{ log.examiner.code }} {% if log.examiner.full_name %}({{ log.examiner.full_name }}){% endif %}{% else %}N/A{% endif %}</p>
+    {# <p><strong>Trainee:</strong> {% if log.trainee %}{{ log.trainee.code }} {% if log.trainee.full_name %}({{ log.trainee.full_name }}){% endif %}{% else %}N/A{% endif %}</p> #}
+    {# --- End Display New Fields --- #}
+
+    <p><strong>Remarks:</strong> {{ log.remarks|default:"N/A"|linebreaksbr }}</p>
+    <p><small>Created: {{ log.created_at }} | Updated: {{ log.updated_at }}</small></p>
+
+    <hr>
+    <a href="{% url 'log_update' log.pk %}" class="btn">Edit Entry</a>
+    <a href="{% url 'log_delete' log.pk %}" class="btn btn-danger">Delete Entry</a>
+    <a href="{% url 'log_list' %}" class="btn btn-secondary">Back to List</a>
+{% endblock %}

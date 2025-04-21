@@ -1,0 +1,90 @@
+<!-- duty_hour_log/templates/duty_hour_log/log_form.html -->
+{% extends 'duty_hour_log/base.html' %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+    <h2>{{ form_title }}</h2>
+    <form method="post">
+        {% csrf_token %}
+
+        <div id="p_id_op" class="form-field-wrapper">{{ form.op.label_tag }} {{ form.op }} {{ form.op.errors }}</div>
+        <div id="p_id_date" class="form-field-wrapper">{{ form.date.label_tag }} {{ form.date }} {{ form.date.errors }}</div>
+        <div id="p_id_start_time" class="form-field-wrapper">{{ form.start_time.label_tag }} {{ form.start_time }} {{ form.start_time.errors }}</div>
+        <div id="p_id_finish_time" class="form-field-wrapper">{{ form.finish_time.label_tag }} {{ form.finish_time }} {{ form.finish_time.errors }}</div>
+        <div id="p_id_rating" class="form-field-wrapper">{{ form.rating.label_tag }} {{ form.rating }} {{ form.rating.errors }}</div>
+
+        <div id="p_id_initial" class="form-field-wrapper">{{ form.initial.label_tag }} {{ form.initial }} {{ form.initial.help_text }} {{ form.initial.errors }}</div>
+        <div id="p_id_trainee" class="form-field-wrapper">{{ form.trainee.label_tag }} {{ form.trainee }} {{ form.trainee.help_text }} {{ form.trainee.errors }}</div>
+        <div id="p_id_ojti" class="form-field-wrapper">{{ form.ojti.label_tag }} {{ form.ojti }} {{ form.ojti.help_text }} {{ form.ojti.errors }}</div>
+        <div id="p_id_examiner" class="form-field-wrapper">{{ form.examiner.label_tag }} {{ form.examiner }} {{ form.examiner.help_text }} {{ form.examiner.errors }}</div>
+
+        <div id="p_id_remarks" class="form-field-wrapper">{{ form.remarks.label_tag }} {{ form.remarks }} {{ form.remarks.errors }}</div>
+
+        <style> /* Same style as in log_list.html for consistency */
+            .form-field-wrapper { margin-bottom: 10px; }
+            .form-field-wrapper label { display: block; font-weight: bold; }
+            .form-field-wrapper select,
+            .form-field-wrapper input,
+            .form-field-wrapper textarea { width: 90%; max-width: 400px; padding: 5px; }
+            .form-field-wrapper small { color: #555; font-size: 0.9em;}
+        </style>
+
+        <button type="submit" class="btn">Save Entry</button>
+        {% if log_instance %}
+            <a href="{% url 'log_detail' log_instance.pk %}" class="btn btn-secondary">Cancel</a>
+        {% else %}
+             <a href="{% url 'log_list' %}" class="btn btn-secondary">Cancel</a>
+        {% endif %}
+    </form>
+
+    <script> // Same JavaScript as in log_list.html
+        document.addEventListener('DOMContentLoaded', function() {
+            const opSelect = document.getElementById('id_op');
+            const initialWrapper = document.getElementById('p_id_initial');
+            const ojtiWrapper = document.getElementById('p_id_ojti');
+            const examinerWrapper = document.getElementById('p_id_examiner');
+            const traineeWrapper = document.getElementById('p_id_trainee');
+
+            const initialField = document.getElementById('id_initial');
+            const ojtiField = document.getElementById('id_ojti');
+            const examinerField = document.getElementById('id_examiner');
+            const traineeField = document.getElementById('id_trainee');
+
+            function toggleFields() {
+                const selectedOp = opSelect.value;
+
+                if (initialWrapper) initialWrapper.style.display = 'none';
+                if (ojtiWrapper) ojtiWrapper.style.display = 'none';
+                if (examinerWrapper) examinerWrapper.style.display = 'none';
+                if (traineeWrapper) traineeWrapper.style.display = 'none';
+
+                 // Do NOT clear values for the update form initially,
+                 // as they should be pre-filled. Clearing happens on 'change'.
+                 // However, if op_type changes, then hidden fields should be cleared.
+                 if (event && event.type === 'change') { // only clear if op_type is actively changed
+                     if (initialField && initialWrapper.style.display === 'none') initialField.value = '';
+                     if (ojtiField && ojtiWrapper.style.display === 'none') ojtiField.value = '';
+                     if (examinerField && examinerWrapper.style.display === 'none') examinerField.value = '';
+                     if (traineeField && traineeWrapper.style.display === 'none') traineeField.value = '';
+                 }
+
+
+                if (selectedOp === 'Solo') {
+                    if (initialWrapper) initialWrapper.style.display = 'block';
+                } else if (selectedOp === 'OJT') {
+                    if (ojtiWrapper) ojtiWrapper.style.display = 'block';
+                    if (traineeWrapper) traineeWrapper.style.display = 'block';
+                } else if (selectedOp === 'Assessment') {
+                    if (examinerWrapper) examinerWrapper.style.display = 'block';
+                    if (traineeWrapper) traineeWrapper.style.display = 'block';
+                }
+            }
+
+            if (opSelect) {
+                opSelect.addEventListener('change', toggleFields);
+                toggleFields(); // Initial call
+            }
+        });
+    </script>
+{% endblock %}

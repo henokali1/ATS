@@ -1,0 +1,18 @@
+<!-- duty_hour_log/templates/duty_hour_log/log_confirm_delete.html -->
+{% extends 'duty_hour_log/base.html' %}
+
+{% block title %}Confirm Deletion{% endblock %}
+
+{% block content %}
+    <h2>Confirm Deletion</h2>
+    <p>Are you sure you want to delete the following log entry?</p>
+    <p>
+        <strong>{{ log.date|date:"Y-m-d" }} - {{ log.initial.code }} - {{ log.get_op_display }} ({{ log.start_time|time:"H:i" }} - {{ log.finish_time|time:"H:i" }})</strong>
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        <a href="{% url 'log_detail' log.pk %}" class="btn btn-secondary">Cancel</a>
+    </form>
+{% endblock %}
