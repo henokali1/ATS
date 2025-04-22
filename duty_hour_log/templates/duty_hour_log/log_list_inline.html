@@ -411,6 +411,7 @@
             if (!saveBtn) return;
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+            console.log("saveNewRowData: Sending data:", formData);
 
             fetch(SAVE_URL, { /* ... AJAX ... */
                 method: 'POST',
@@ -419,12 +420,16 @@
             })
             .then(response => response.json().then(data => ({ status: response.status, body: data })))
             .then(({ status, body }) => {
+                 // *** START DEBUGGING BLOCK ***
+                 console.log("saveNewRowData: Received response - Status:", status, "Body:", body);
                 if (status === 200 && body.status === 'success') {
+                    console.log("saveNewRowData: Success status received.");
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = body.new_row_html.trim();
                     const staticRow = tempDiv.firstChild;
                     row.replaceWith(staticRow);
                     enableOtherButtons();
+                    location.reload();
                 } else {
                     showErrors(body.errors || { '__all__': ['Save failed.'] }, row);
                     saveBtn.disabled = false;
@@ -608,7 +613,7 @@
             });
         }
 
-    }); // --- END OF DOMContentLoaded LISTENER ---
+    }); 
 
 </script>
 {% endblock %}
