@@ -1,0 +1,614 @@
+<!-- duty_hour_log/templates/duty_hour_log/log_list_inline.html -->
+{% extends 'duty_hour_log/base.html' %}
+{% load static %}
+
+{% block title %}Duty Logs{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-12"> {# Use full width for table layout #}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                 <h2 class="mb-0"><i class="fas fa-clipboard-list"></i> Duty Hour Logs</h2>
+                 <button id="addLogRowBtn" class="btn btn-success"><i class="fas fa-plus"></i> Add New Log</button>
+            </div>
+
+            {# General error message area for Add New Log issues #}
+            <div id="inlineErrorMessages" class="alert alert-danger d-none" role="alert">
+                 <!-- Error messages will be inserted here by JS -->
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-striped table-hover table-bordered caption-top">
+                    <caption>
+                        List of duty logs {% if page_obj %}(Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}){% endif %}
+                    </caption>
+                    <thead class="table-light">
+                        <tr>
+                            {# Adjust column headers slightly #}
+                            <th style="width: 110px;">Date</th>
+                            <th style="width: 70px;">Start</th>
+                            <th style="width: 70px;">Finish</th>
+                            <th style="width: 110px;">Op</th>
+                            <th style="width: 90px;">Rating</th>
+                            <th>Initial</th>
+                            <th>Trainee</th>
+                            <th>OJTI</th>
+                            <th>Examiner</th>
+                            <th>Remarks</th>
+                            <th style="width: 120px;">Actions</th> {# Combined Actions #}
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody">
+                        {# New row template (initially hidden) #}
+                        <template id="newLogRowTemplate">
+                            <tr class="editable-row new-log-row">
+                                <td><input type="date" name="date" class="form-control form-control-sm" required></td>
+                                <td><input type="time" name="start_time" class="form-control form-control-sm" required></td>
+                                <td><input type="time" name="finish_time" class="form-control form-control-sm"></td>
+                                <td>
+                                    <select name="op" class="form-select form-select-sm op-select" required>
+                                        <!-- Options populated by JS -->
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="rating" class="form-select form-select-sm" required>
+                                         <!-- Options populated by JS -->
+                                    </select>
+                                </td>
+                                <td class="conditional-field" data-op-required="Solo">
+                                    <select name="initial" class="form-select form-select-sm initial-select">
+                                        <option value="">---------</option>
+                                        <!-- Options populated by JS -->
+                                    </select>
+                                </td>
+                                <td class="conditional-field" data-op-required="OJT Assessment">
+                                    <select name="trainee" class="form-select form-select-sm initial-select">
+                                        <option value="">---------</option>
+                                         <!-- Options populated by JS -->
+                                    </select>
+                                </td>
+                                <td class="conditional-field" data-op-required="OJT Assessment">
+                                    <select name="ojti" class="form-select form-select-sm initial-select">
+                                         <option value="">---------</option>
+                                         <!-- Options populated by JS -->
+                                    </select>
+                                </td>
+                                <td class="conditional-field" data-op-required="Assessment">
+                                    <select name="examiner" class="form-select form-select-sm initial-select">
+                                         <option value="">---------</option>
+                                         <!-- Options populated by JS -->
+                                    </select>
+                                </td>
+                                <td><textarea name="remarks" class="form-control form-control-sm" rows="1"></textarea></td>
+                                <td>
+                                    {# *** ADDED BUTTONS HERE for the NEW row *** #}
+                                    <button type="button" class="btn btn-sm btn-primary save-inline-btn" title="Save New Entry"><i class="fas fa-save"></i></button>
+                                    <button type="button" class="btn btn-sm btn-secondary cancel-inline-btn" title="Cancel Add"><i class="fas fa-times"></i></button>
+                                    <!-- Error div might get inserted here by JS -->
+                                </td>
+                            </tr>
+                        </template>
+                        {# End of new row template #}
+
+                        {# Existing logs rendered by Django #}
+                        {% if page_obj.object_list %}
+                            {% for log in page_obj %}
+                                {# Ensure the log object is passed to the partial #}
+                                {% include 'duty_hour_log/partials/log_table_row_static.html' with log=log %}
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="11" class="text-center">No duty hour logs found.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# --- PAGINATION CONTROLS (Keep as before) --- #}
+            {% if page_obj and page_obj.has_other_pages %}
+            <nav aria-label="Log pagination">
+                <ul class="pagination justify-content-center">
+                    {# Previous Button #}
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                                <span aria-hidden="true">«</span> Previous
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">«</span> Previous
+                        </li>
+                    {% endif %}
+
+                    {# Page Numbers #}
+                    {% for num in page_obj.paginator.page_range %}
+                         {% if page_obj.number == num %}
+                            <li class="page-item active" aria-current="page"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                            {% if num == 1 and page_obj.number > 4 %}
+                                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                                {% if page_obj.number > 5 %}
+                                  <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                            {% elif num == page_obj.paginator.num_pages and page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+                                {% if page_obj.number < page_obj.paginator.num_pages|add:'-4' %}
+                                  <li class="page-item disabled"><span class="page-link">...</span></li>
+                                {% endif %}
+                                <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {# Next Button #}
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                                Next <span aria-hidden="true">»</span>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next <span aria-hidden="true">»</span></span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {# --- END PAGINATION CONTROLS --- #}
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // --- Constants ---
+    const ACTIVE_INITIALS = JSON.parse('{{ active_initials_json|escapejs }}');
+    const OP_CHOICES = JSON.parse('{{ op_choices_json|escapejs }}');
+    const RATING_CHOICES = JSON.parse('{{ rating_choices_json|escapejs }}');
+    const TODAY_DATE = '{{ today_date }}';
+    const SAVE_URL = "{% url 'save_inline_log' %}"; // For creating new logs
+    const CSRF_TOKEN = "{{ csrf_token }}";
+    const UPDATE_INLINE_URL_TEMPLATE = "{% url 'update_inline_log' pk=999999 %}".replace('999999', '${logId}');
+
+    // --- START OF DOMContentLoaded LISTENER ---
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // --- DOM Element Variables ---
+        const addBtn = document.getElementById('addLogRowBtn');
+        const tableBody = document.getElementById('logTableBody');
+        const template = document.getElementById('newLogRowTemplate');
+        const errorMessagesDiv = document.getElementById('inlineErrorMessages');
+
+        // --- Helper: Populate Select Options ---
+        function populateSelect(selectElement, choices) {
+            if (!selectElement) return;
+            selectElement.innerHTML = ''; // Clear existing options
+            choices.forEach(choice => {
+                 if (choice && typeof choice.value !== 'undefined' && typeof choice.display !== 'undefined') {
+                    const option = document.createElement('option');
+                    option.value = choice.value;
+                    option.textContent = choice.display;
+                    selectElement.appendChild(option);
+                } else {
+                    console.warn("populateSelect: Invalid choice object format:", choice);
+                }
+            });
+        }
+
+        // --- Helper: Populate Initial Selects ---
+        function populateInitialSelect(selectElement) {
+            if (!selectElement) return;
+             if (!ACTIVE_INITIALS || !Array.isArray(ACTIVE_INITIALS)) {
+                  console.warn("populateInitialSelect: ACTIVE_INITIALS data is missing or not an array!");
+                   selectElement.innerHTML = '<option value="">Error loading initials</option>';
+                  return;
+              }
+             selectElement.innerHTML = '<option value="">---------</option>'; // Add blank default
+             ACTIVE_INITIALS.forEach(initial => {
+                  if (initial && typeof initial.id !== 'undefined' && typeof initial.code !== 'undefined') {
+                    const option = document.createElement('option');
+                    option.value = initial.id;
+                    option.textContent = initial.code;
+                    selectElement.appendChild(option);
+                 } else {
+                     console.warn("populateInitialSelect: Invalid initial object format:", initial);
+                 }
+             });
+        }
+
+         // --- Helper: Toggle Conditional Fields in a Row ---
+        function toggleConditionalFields(row) {
+            const opSelect = row.querySelector('select[name="op"]');
+            if (!opSelect) return;
+            const selectedOp = opSelect.value;
+            row.querySelectorAll('.conditional-field').forEach(cell => {
+                const requiredOps = cell.dataset.opRequired.split(' ');
+                const fieldSelect = cell.querySelector('select');
+                if (requiredOps.includes(selectedOp)) {
+                    cell.style.visibility = 'visible';
+                } else {
+                    cell.style.visibility = 'hidden';
+                    if (fieldSelect) fieldSelect.value = ''; // Clear value when hiding
+                }
+            });
+        }
+
+        // --- Helper: Show Errors ---
+        function showErrors(errors, row = null) {
+            let errorDisplay;
+            if (row) { // Show errors within the specific row being edited/added
+                errorDisplay = row.querySelector('.inline-row-errors');
+                 // If error div doesn't exist, create it inside the action cell
+                if (!errorDisplay) {
+                    const actionCell = row.querySelector('td:last-child');
+                    if (actionCell) {
+                         errorDisplay = document.createElement('div');
+                         errorDisplay.className = 'inline-row-errors text-danger mt-1';
+                         errorDisplay.style.fontSize = '0.8em';
+                         actionCell.insertBefore(errorDisplay, actionCell.firstChild); // Insert before buttons
+                    } else {
+                        errorDisplay = errorMessagesDiv; // Fallback to general if action cell not found
+                    }
+                }
+            } else { // Show general errors
+                 errorDisplay = errorMessagesDiv;
+                 if (errorDisplay) errorDisplay.classList.remove('d-none');
+            }
+
+            if (!errorDisplay) return; // Safety check
+
+            errorDisplay.innerHTML = ''; // Clear previous errors
+            const ul = document.createElement('ul');
+            ul.style.listStyle = 'none';
+            ul.style.paddingLeft = '0';
+            ul.style.marginBottom = '0';
+
+            for (const field in errors) {
+                errors[field].forEach(error => {
+                    const li = document.createElement('li');
+                    const fieldName = field === '__all__' ? '' : field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) + ': ';
+                    li.textContent = `${fieldName}${error}`;
+                    ul.appendChild(li);
+                });
+            }
+             errorDisplay.appendChild(ul);
+             if (errorDisplay === errorMessagesDiv) {
+                 errorDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
+             }
+        }
+
+        // --- Helper: Hide Errors ---
+        function hideErrors(row = null) {
+             if (row) {
+                 const errorDisplay = row.querySelector('.inline-row-errors');
+                 if(errorDisplay) errorDisplay.innerHTML = '';
+             } else {
+                 if (errorMessagesDiv) errorMessagesDiv.classList.add('d-none');
+                 if (errorMessagesDiv) errorMessagesDiv.innerHTML = '';
+             }
+        }
+
+        // --- Helper: Enable/Disable Buttons ---
+        function enableOtherButtons() {
+             if (tableBody) {
+                tableBody.querySelectorAll('.edit-inline-btn').forEach(btn => btn.disabled = false);
+             }
+             if (addBtn) {
+                 addBtn.disabled = false;
+             }
+        }
+        function disableOtherButtons(exceptRow = null) {
+            if (tableBody) {
+                tableBody.querySelectorAll('.edit-inline-btn').forEach(btn => {
+                   // Disable if it's not within the row currently being edited (if exceptRow is provided)
+                   if (!exceptRow || !exceptRow.contains(btn)) {
+                       btn.disabled = true;
+                   }
+                });
+            }
+             if (addBtn) {
+                 addBtn.disabled = true;
+             }
+        }
+
+
+        // --- Add New Row Logic ---
+        function addRowHandler() {
+            if (!template || !tableBody) return;
+
+            if (tableBody.querySelector('.new-log-row')) {
+                alert("Please save or cancel the current new log entry first.");
+                return;
+            }
+
+            const clone = template.content.cloneNode(true);
+            const newRow = clone.querySelector('tr');
+            if (!newRow) return;
+
+            // Populate selects
+            populateSelect(newRow.querySelector('select[name="op"]'), OP_CHOICES);
+            populateSelect(newRow.querySelector('select[name="rating"]'), RATING_CHOICES);
+            newRow.querySelectorAll('.initial-select').forEach(populateInitialSelect);
+
+            // Set default date
+            const dateInput = newRow.querySelector('input[name="date"]');
+            if (dateInput) dateInput.value = TODAY_DATE;
+
+            // Add event listener for OP change
+            const opSelect = newRow.querySelector('select[name="op"]');
+            if (opSelect) opSelect.addEventListener('change', () => toggleConditionalFields(newRow));
+
+            // Add event listeners for Save/Cancel *specific to this new row*
+            const saveBtn = newRow.querySelector('.save-inline-btn'); // Button from template
+            const cancelBtn = newRow.querySelector('.cancel-inline-btn'); // Button from template
+
+            if (saveBtn) saveBtn.addEventListener('click', () => saveNewRowData(newRow));
+            if (cancelBtn) cancelBtn.addEventListener('click', () => {
+                newRow.remove();
+                enableOtherButtons();
+                hideErrors();
+            });
+
+            // Insert row at the top
+            tableBody.prepend(newRow);
+            toggleConditionalFields(newRow); // Initial toggle
+            disableOtherButtons(); // Disable Add/Edit buttons on other rows
+            hideErrors(); // Clear general errors
+        }
+
+
+        // --- Save NEW Row Data ---
+        function saveNewRowData(row) {
+            const formData = {};
+            let isValidClient = true;
+            const requiredFields = ['date', 'start_time', 'op', 'rating'];
+
+            hideErrors();
+            hideErrors(row);
+            row.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+
+            row.querySelectorAll('input, select, textarea').forEach(el => {
+                if (el.name) {
+                    formData[el.name] = el.value.trim();
+                    if (requiredFields.includes(el.name) && !formData[el.name]) {
+                        el.classList.add('is-invalid');
+                        isValidClient = false;
+                    }
+                }
+            });
+
+            const selectedOp = formData['op'];
+            row.querySelectorAll('.conditional-field').forEach(cell => {
+                const fieldSelect = cell.querySelector('select');
+                if (fieldSelect && window.getComputedStyle(cell).visibility === 'visible' && !fieldSelect.value) {
+                    fieldSelect.classList.add('is-invalid');
+                    isValidClient = false;
+                }
+            });
+
+            const startTimeStr = formData['start_time'];
+            const finishTimeStr = formData['finish_time'];
+            if (startTimeStr && finishTimeStr && startTimeStr >= finishTimeStr) {
+                const finishInput = row.querySelector('input[name="finish_time"]');
+                if (finishInput) finishInput.classList.add('is-invalid');
+                isValidClient = false;
+                showErrors({ 'Finish Time': ['Must be after Start Time.'] }, row);
+            }
+
+            if (!isValidClient) {
+                 if (!row.querySelector('.inline-row-errors')?.innerHTML) {
+                     showErrors({ '__all__': ['Please fill mandatory fields (red).'] }, row);
+                 }
+                return;
+            }
+
+            const saveBtn = row.querySelector('.save-inline-btn');
+            if (!saveBtn) return;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+            fetch(SAVE_URL, { /* ... AJAX ... */
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json().then(data => ({ status: response.status, body: data })))
+            .then(({ status, body }) => {
+                if (status === 200 && body.status === 'success') {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = body.new_row_html.trim();
+                    const staticRow = tempDiv.firstChild;
+                    row.replaceWith(staticRow);
+                    enableOtherButtons();
+                } else {
+                    showErrors(body.errors || { '__all__': ['Save failed.'] }, row);
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i>';
+                }
+            })
+            .catch(error => {
+                console.error('Error saving new log:', error);
+                showErrors({ '__all__': ['Network error.'] }, row);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save"></i>';
+            });
+        }
+
+
+        // --- Inline Edit: Start Editing an Existing Row ---
+        function handleInlineEdit(button) {
+            const row = button.closest('tr');
+            if (!row || row.classList.contains('is-editing')) return;
+
+            const logId = row.dataset.logId;
+            const finishTimeCell = row.querySelector('.td-finish-time');
+            const remarksCell = row.querySelector('.td-remarks');
+            const actionsCell = row.querySelector('.td-actions');
+
+            if (!logId || !finishTimeCell || !remarksCell || !actionsCell) {
+                 console.error("Inline edit: Missing required elements or data attributes."); return;
+            }
+
+            const currentFinishTime = finishTimeCell.dataset.finishTime || '';
+            const currentRemarks = remarksCell.dataset.remarks || '';
+
+            row.dataset.originalFinishHtml = finishTimeCell.innerHTML;
+            row.dataset.originalRemarksHtml = remarksCell.innerHTML;
+            row.dataset.originalActionsHtml = actionsCell.innerHTML;
+
+            finishTimeCell.innerHTML = `<input type="time" name="inline_finish_time" class="form-control form-control-sm" value="${currentFinishTime}">`;
+            remarksCell.innerHTML = `<textarea name="inline_remarks" class="form-control form-control-sm" rows="1">${currentRemarks}</textarea>`;
+
+            // Create Save/Cancel buttons for editing
+            actionsCell.innerHTML = `
+                <button type="button" class="btn btn-sm btn-primary save-changes-btn" title="Save Changes"><i class="fas fa-save"></i></button>
+                <button type="button" class="btn btn-sm btn-secondary cancel-changes-btn" title="Cancel Edit"><i class="fas fa-times"></i></button>
+                <div class="inline-row-errors text-danger mt-1" style="font-size: 0.8em;"></div>
+            `;
+
+            row.classList.add('is-editing');
+            disableOtherButtons(row); // Disable others, allows buttons within the current row
+        }
+
+        // --- Inline Edit: Save Changes to an Existing Row ---
+        function handleInlineSave(button) {
+            const row = button.closest('tr');
+            if (!row) return;
+
+            const logId = row.dataset.logId;
+            const startTime = row.dataset.startTime;
+            const finishInput = row.querySelector('input[name="inline_finish_time"]');
+            const remarksInput = row.querySelector('textarea[name="inline_remarks"]');
+
+            if (!logId || !finishInput || !remarksInput) { console.error("Inline save: Missing required elements."); return; }
+
+            const newFinishTime = finishInput.value.trim();
+            const newRemarks = remarksInput.value.trim();
+
+            // Client-side Validation
+            let isValid = true;
+            hideErrors(row);
+            finishInput.classList.remove('is-invalid');
+            if (newFinishTime && startTime && newFinishTime <= startTime) {
+                 finishInput.classList.add('is-invalid');
+                 showErrors({'Finish Time': ['Must be after Start Time.']}, row);
+                 isValid = false;
+             }
+            if (newFinishTime && !/^\d{2}:\d{2}(:\d{2})?$/.test(newFinishTime)) {
+                 finishInput.classList.add('is-invalid');
+                 showErrors({'Finish Time': ['Invalid format.']}, row);
+                 isValid = false;
+             }
+            if (!isValid) return;
+
+            // UI feedback
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+            const cancelButton = row.querySelector('.cancel-changes-btn');
+            if(cancelButton) cancelButton.disabled = true;
+
+            // AJAX Request
+            const updateUrl = UPDATE_INLINE_URL_TEMPLATE.replace('${logId}', logId);
+            fetch(updateUrl, { /* ... AJAX ... */
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+                body: JSON.stringify({ finish_time: newFinishTime, remarks: newRemarks })
+            })
+            .then(response => { // Robust error check
+                 if (!response.ok) {
+                    return response.json().then(errorData => Promise.reject({ status: response.status, body: errorData }))
+                        .catch(() => Promise.reject({ status: response.status, body: { errors: { '__all__': ['Server error, invalid response.'] } } }));
+                 }
+                 return response.json().then(data => ({ status: response.status, body: data }));
+            })
+            .then(({ status, body }) => { // Success (response.ok)
+                 if (body.status === 'success') {
+                    const finishTimeCell = row.querySelector('.td-finish-time');
+                    const remarksCell = row.querySelector('.td-remarks');
+                    const actionsCell = row.querySelector('.td-actions');
+
+                    if (finishTimeCell) { finishTimeCell.innerHTML = body.finish_time_display; finishTimeCell.dataset.finishTime = body.finish_time_value; }
+                    if (remarksCell) { remarksCell.innerHTML = body.remarks_display; remarksCell.dataset.remarks = body.remarks_value; }
+
+                    // Restore original buttons, then remove edit if needed
+                    if (actionsCell) actionsCell.innerHTML = row.dataset.originalActionsHtml || '';
+                    if (actionsCell && !body.can_edit_again) { const editBtn = actionsCell.querySelector('.edit-inline-btn'); if (editBtn) editBtn.remove(); }
+
+                    row.classList.remove('is-editing');
+                    delete row.dataset.originalFinishHtml; delete row.dataset.originalRemarksHtml; delete row.dataset.originalActionsHtml;
+                    enableOtherButtons();
+                 } else { // Status 200 but backend error
+                     showErrors(body.errors || { '__all__': ['Save failed.'] }, row);
+                     button.disabled = false; button.innerHTML = '<i class="fas fa-save"></i>';
+                     if(cancelButton) cancelButton.disabled = false;
+                 }
+            })
+            .catch(errorInfo => { // Network errors or non-ok responses
+                 console.error('Error updating inline log:', errorInfo);
+                 const errors = errorInfo.body ? errorInfo.body.errors : { '__all__': [`${errorInfo.status || 'Network Error'}: Update failed.`] };
+                 showErrors(errors , row);
+                 button.disabled = false; button.innerHTML = '<i class="fas fa-save"></i>';
+                 if(cancelButton) cancelButton.disabled = false;
+            });
+        }
+
+        // --- Inline Edit: Cancel Editing an Existing Row ---
+        function handleInlineCancel(button) {
+            const row = button.closest('tr');
+            if (!row || !row.classList.contains('is-editing')) return;
+
+            const finishTimeCell = row.querySelector('.td-finish-time');
+            const remarksCell = row.querySelector('.td-remarks');
+            const actionsCell = row.querySelector('.td-actions');
+
+            if (finishTimeCell && row.dataset.originalFinishHtml) finishTimeCell.innerHTML = row.dataset.originalFinishHtml;
+            if (remarksCell && row.dataset.originalRemarksHtml) remarksCell.innerHTML = row.dataset.originalRemarksHtml;
+            if (actionsCell && row.dataset.originalActionsHtml) actionsCell.innerHTML = row.dataset.originalActionsHtml;
+
+            delete row.dataset.originalFinishHtml; delete row.dataset.originalRemarksHtml; delete row.dataset.originalActionsHtml;
+            row.classList.remove('is-editing');
+            hideErrors(row);
+            enableOtherButtons();
+        }
+
+
+        // --- Attach Main Event Listeners ---
+        if (addBtn) {
+             addBtn.addEventListener('click', addRowHandler);
+        }
+
+        if (tableBody) {
+            tableBody.addEventListener('click', function(event) {
+                const target = event.target;
+                const editButton = target.closest('.edit-inline-btn');
+                const saveChangesButton = target.closest('.save-changes-btn');
+                const cancelChangesButton = target.closest('.cancel-changes-btn');
+                // New row buttons handled in addRowHandler
+                const deleteLink = target.closest('a.delete-btn');
+
+                if (editButton) {
+                    event.preventDefault();
+                    handleInlineEdit(editButton);
+                } else if (saveChangesButton) {
+                    event.preventDefault();
+                    handleInlineSave(saveChangesButton);
+                } else if (cancelChangesButton) {
+                    event.preventDefault();
+                    handleInlineCancel(cancelChangesButton);
+                } else if (deleteLink) {
+                    if (!confirm('Are you sure you want to delete this log entry?')) {
+                        event.preventDefault();
+                    }
+                }
+            });
+        }
+
+    }); // --- END OF DOMContentLoaded LISTENER ---
+
+</script>
+{% endblock %}

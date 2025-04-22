@@ -36,7 +36,7 @@ class DutyHourLog(models.Model):
     )
     date = models.DateField()
     start_time = models.TimeField(verbose_name="Start Time")
-    finish_time = models.TimeField(verbose_name="Finish Time")
+    finish_time = models.TimeField(verbose_name="Finish Time", null=True, blank=True)
     rating = models.CharField(
         max_length=10,
         choices=RATING_CHOICES

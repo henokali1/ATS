@@ -3,18 +3,13 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # List & Create view (e.g., /logs/) - Handles both GET (list) and POST (create)
     path('', views.log_list, name='log_list'),
+    path('save_inline/', views.save_inline_log, name='save_inline_log'),
 
-    # Detail view (e.g., /logs/5/)
+    # New endpoint for updating existing log inline (finish/remarks)
+    path('<int:pk>/update_inline/', views.update_inline_log, name='update_inline_log'),
+
     path('<int:pk>/', views.log_detail, name='log_detail'),
-
-    # Create view - NO LONGER NEEDED for the primary workflow
-    # path('new/', views.log_create, name='log_create'), # Commented out or remove
-
-    # Update view (e.g., /logs/5/edit/)
-    path('<int:pk>/edit/', views.log_update, name='log_update'),
-
-    # Delete view (e.g., /logs/5/delete/)
+    path('<int:pk>/edit/', views.log_update, name='log_update'), # Keep standard edit page
     path('<int:pk>/delete/', views.log_delete, name='log_delete'),
 ]

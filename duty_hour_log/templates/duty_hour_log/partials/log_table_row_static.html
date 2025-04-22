@@ -1,0 +1,33 @@
+<!-- duty_hour_log/templates/duty_hour_log/partials/log_table_row_static.html -->
+{# Add data-pk and other data attributes for JS #}
+<tr data-log-id="{{ log.pk }}" data-start-time="{{ log.start_time|time:"H:i" }}">
+    <td>{{ log.date|date:"d-M-Y" }}</td>
+    <td>{{ log.start_time|time:"H:i" }}</td>
+    {# Add class and data attribute for finish time #}
+    <td class="td-finish-time" data-finish-time="{{ log.finish_time|time:"H:i"|default:'' }}">
+        {{ log.finish_time|time:"H:i"|default:"..." }}
+    </td>
+    <td>{{ log.get_op_display }}</td>
+    <td>{{ log.get_rating_display }}</td>
+    <td>{{ log.initial.code|default:"-" }}</td>
+    <td>{{ log.trainee.code|default:"-" }}</td>
+    <td>{{ log.ojti.code|default:"-" }}</td>
+    <td>{{ log.examiner.code|default:"-" }}</td>
+     {# Add class and data attribute for remarks #}
+    <td class="td-remarks" data-remarks="{{ log.remarks|default:'' }}">
+        {{ log.remarks|default:""|truncatechars:30 }} {# Display truncated, but store full in data attribute #}
+    </td>
+     {# Add class for actions cell #}
+    <td class="td-actions">
+        {# Only show Edit button if finish_time is NOT set #}
+        {% if not log.finish_time %}
+        <button type="button" class="btn btn-sm btn-warning edit-inline-btn" title="Edit Finish/Remarks">
+            <i class="fas fa-edit"></i>
+        </button>
+        {% endif %}
+        {# Keep delete button using standard link/view for now #}
+        <a href="{% url 'log_delete' log.pk %}" class="btn btn-sm btn-danger delete-btn" title="Delete">
+            <i class="fas fa-trash"></i>
+        </a>
+    </td>
+</tr>
