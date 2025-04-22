@@ -2,6 +2,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import DutyHourLog, Initial
+from django.utils import timezone
 
 class DutyHourLogForm(forms.ModelForm):
     # ... (other fields like initial, ojti, examiner, trainee remain the same) ...
@@ -109,3 +110,55 @@ class DutyHourLogForm(forms.ModelForm):
 
 
         return cleaned_data
+
+class ReportFilterForm(forms.Form):
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control form-control-sm'}),
+        required=True,
+        label="Start Date"
+    )
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control form-control-sm'}),
+        required=True,
+        label="End Date"
+    )
+    initial = forms.ModelChoiceField(
+        queryset=Initial.objects.filter(is_active=True).order_by('code'),
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
+        required=False,
+        label="Initial (Any Role)",
+        help_text="Select an initial to report on (Solo, Trainee, OJTI, or Examiner)."
+    )
+    op = forms.ChoiceField(
+        choices=[('', '---------')] + DutyHourLog.OP_CHOICES, # Add blank choice
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
+        required=False,
+        label="Operation Type"
+    )
+    rating = forms.ChoiceField(
+        choices=[('', '---------')] + [(r[0], r[1]) for r in DutyHourLog.RATING_CHOICES], # Add blank choice
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
+        required=False,
+        label="Rating"
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date and end_date < start_date:
+            raise ValidationError("End date cannot be before start date.")
+
+        return cleaned_data
+
+    # Set initial values for dates (optional, e.g., start of month)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set default dates only if not already provided (e.g., from GET request)
+        if not self.is_bound or 'start_date' not in self.data:
+            today = timezone.localdate()
+            first_day_of_month = today.replace(day=1)
+            self.fields['start_date'].initial = first_day_of_month
+        if not self.is_bound or 'end_date' not in self.data:
+             self.fields['end_date'].initial = timezone.localdate()

@@ -1,8 +1,8 @@
 # duty_hour_log/views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import DutyHourLog, Initial # Import Initial
-from .forms import DutyHourLogForm
-from datetime import date
+from .forms import DutyHourLogForm, ReportFilterForm 
+from datetime import date, timedelta
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.http import JsonResponse # For AJAX view
@@ -12,6 +12,10 @@ import json # To parse request body
 from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.utils.dateparse import parse_time
+from django.db.models import F, ExpressionWrapper, DurationField, Sum, Q
+from django.utils import timezone
+from datetime import datetime
+
 
 # List View (Read - All) - Modified for Inline Add
 def log_list(request):
@@ -151,3 +155,99 @@ def update_inline_log(request, pk):
         # Log the exception e
         print(f"Error updating inline log {pk}: {e}") # Basic logging
         return JsonResponse({'status': 'error', 'errors': {'__all__': [f'An unexpected server error occurred.']}}, status=500)
+
+def report_view(request):
+    form = ReportFilterForm(request.GET or None) # Populate with GET data if submitted
+    total_duration_timedelta = None
+    total_hours = 0
+    filtered_logs = DutyHourLog.objects.none() # Start with an empty queryset
+    submitted_filters = {} # To display applied filters
+
+    if form.is_valid():
+        start_date = form.cleaned_data['start_date']
+        end_date = form.cleaned_data['end_date']
+        initial = form.cleaned_data['initial']
+        op = form.cleaned_data['op']
+        rating = form.cleaned_data['rating']
+
+        # Store submitted filters for display
+        submitted_filters = {
+            'start_date': start_date,
+            'end_date': end_date,
+            'initial': initial.code if initial else 'Any',
+            'op': op if op else 'Any',
+            'rating': rating if rating else 'Any',
+        }
+
+        # Base query: within date range and MUST have finish_time
+        logs_query = DutyHourLog.objects.filter(
+            date__range=[start_date, end_date],
+            finish_time__isnull=False # Important: Only include logs with finish times
+        )
+
+        # Apply optional filters
+        if initial:
+            # Filter logs where the selected initial was involved in *any* relevant role
+            logs_query = logs_query.filter(
+                Q(initial=initial) | Q(trainee=initial) | Q(ojti=initial) | Q(examiner=initial)
+            )
+        if op:
+            logs_query = logs_query.filter(op=op)
+        if rating:
+            logs_query = logs_query.filter(rating=rating)
+
+        # Annotate with duration and calculate total duration
+        # Ensure calculation handles time fields correctly (database might store as time without date)
+        # This assumes start_time and finish_time are on the *same day* as specified by 'date'
+        # NOTE: SQLite has limitations with DurationField arithmetic. This might work better on PostgreSQL/MySQL.
+        # If issues arise on SQLite, consider calculating in Python (less efficient for large datasets).
+        try:
+             annotated_logs = logs_query.annotate(
+                duration=ExpressionWrapper(
+                    F('finish_time') - F('start_time'),
+                    output_field=DurationField()
+                 )
+             )
+             # Handle potential negative durations if finish_time is on the next day (unlikely but possible)
+             # For simplicity, we assume finish_time > start_time on the same day.
+             # A more robust solution would involve datetime objects.
+
+             # Aggregate the sum of durations
+             aggregation_result = annotated_logs.aggregate(total_duration=Sum('duration'))
+             total_duration_timedelta = aggregation_result.get('total_duration')
+
+        except Exception as e:
+            # Catch potential database-specific errors (especially with SQLite time subtraction)
+            print(f"Database aggregation error: {e}. Falling back to Python calculation.")
+            total_duration_timedelta = timedelta(0)
+            logs_for_python_calc = list(logs_query) # Evaluate the query
+            for log in logs_for_python_calc:
+                # Create datetime objects for calculation if needed (assuming same day)
+                # This basic approach works if start/finish are TimeFields on same date
+                 if log.start_time and log.finish_time and log.finish_time > log.start_time:
+                    # Simplistic calculation for TimeFields (might be inaccurate across midnight)
+                    # A robust way requires combining DateField and TimeField into DateTimeFields
+                     start_dt = timezone.make_aware(datetime.combine(log.date, log.start_time))
+                     finish_dt = timezone.make_aware(datetime.combine(log.date, log.finish_time))
+                     total_duration_timedelta += (finish_dt - start_dt)
+                 elif log.start_time and log.finish_time and log.finish_time < log.start_time:
+                     # Handle overnight scenario simply (adds 24h) - adjust if needed
+                     start_dt = timezone.make_aware(datetime.combine(log.date, log.start_time))
+                     # Assume finish is on the *next* day relative to start
+                     finish_dt = timezone.make_aware(datetime.combine(log.date + timedelta(days=1), log.finish_time))
+                     total_duration_timedelta += (finish_dt - start_dt)
+
+
+        if total_duration_timedelta:
+            total_seconds = total_duration_timedelta.total_seconds()
+            total_hours = total_seconds / 3600  # Convert seconds to hours
+            filtered_logs = logs_query # Assign the filtered logs for potential display
+
+    context = {
+        'form': form,
+        'total_hours': total_hours if total_duration_timedelta is not None else None,
+        'submitted_filters': submitted_filters if form.is_valid() else None,
+        'filtered_logs': filtered_logs, # Pass logs for optional display
+        'has_results': total_duration_timedelta is not None and form.is_valid(),
+    }
+    return render(request, 'duty_hour_log/report.html', context)

@@ -46,7 +46,20 @@
           <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav ms-auto">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0"> {# Changed ms-auto to me-auto #}
+             <li class="nav-item">
+               <a class="nav-link {% if request.resolver_match.url_name == 'log_list' %}active{% endif %}" aria-current="page" href="{% url 'log_list' %}">
+                 <i class="fas fa-clipboard-list"></i> Log List
+               </a>
+             </li>
+             <li class="nav-item"> {# NEW REPORT LINK #}
+               <a class="nav-link {% if request.resolver_match.url_name == 'report_view' %}active{% endif %}" href="{% url 'report_view' %}">
+                 <i class="fas fa-chart-bar"></i> Reports
+               </a>
+             </li>
+             {# Add other nav items here if needed #}
+          </ul>
+          <ul class="navbar-nav ms-auto"> {# Keep dark mode toggle on the right #}
             <li class="nav-item">
               <button id="darkModeToggle" class="btn btn-outline-light ms-lg-2 mt-2 mt-lg-0">
                   <i class="fas fa-moon"></i> / <i class="fas fa-sun"></i>
