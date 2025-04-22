@@ -1,5 +1,6 @@
 <!-- duty_hour_log/templates/duty_hour_log/report.html -->
 {% extends 'duty_hour_log/base.html' %}
+{% load duration_tags %} {# <<< LOAD THE CUSTOM TAGS #}
 
 {% block title %}Duty Log Report{% endblock %}
 
@@ -8,7 +9,9 @@
     <div class="col-lg-10 offset-lg-1">
         <h2 class="mb-4"><i class="fas fa-chart-bar"></i> Duty Log Report Generator</h2>
 
+        {# --- Filter Form Card (no changes needed here) --- #}
         <div class="card mb-4">
+           <!-- ... filter form ... -->
             <div class="card-header">
                 <i class="fas fa-filter"></i> Report Filters
             </div>
@@ -68,6 +71,7 @@
             </div>
         </div>
 
+
         {% if has_results %}
         <div class="card border-success">
             <div class="card-header bg-success text-white">
@@ -89,18 +93,18 @@
                     <h5 class="mt-4">Matching Log Entries ({{ filtered_logs.count }})</h5>
                      <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                         <table class="table table-sm table-striped table-bordered small">
-                            <thead class="table-light sticky-top">
+                            <thead class="table-light sticky-top"> {# Added sticky-top for header #}
                                 <tr>
                                     <th>Date</th>
                                     <th>Start</th>
                                     <th>Finish</th>
+                                    <th>Duration</th> {# <<< NEW HEADER #}
                                     <th>Op</th>
                                     <th>Rating</th>
                                     <th>Initial</th>
                                     <th>Trainee</th>
                                     <th>OJTI</th>
                                     <th>Examiner</th>
-                                    <th>Duration (HH:MM)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -108,24 +112,23 @@
                                 <tr>
                                     <td>{{ log.date|date:"Y-m-d" }}</td>
                                     <td>{{ log.start_time|time:"H:i" }}</td>
-                                    <td>{{ log.finish_time|time:"H:i" }}</td>
+                                    <td>{{ log.finish_time|time:"H:i"|default:"-" }}</td>
+                                    {# <<< USE MODEL METHOD AND FILTER >>> #}
+                                    <td>{{ log.calculate_duration|format_duration }}</td>
                                     <td>{{ log.get_op_display }}</td>
                                     <td>{{ log.get_rating_display }}</td>
                                     <td>{{ log.initial.code|default:"-" }}</td>
                                     <td>{{ log.trainee.code|default:"-" }}</td>
                                     <td>{{ log.ojti.code|default:"-" }}</td>
                                     <td>{{ log.examiner.code|default:"-" }}</td>
-                                     {# Example duration calc (less reliable than aggregate) #}
-                                     {# {% if log.finish_time %}
-                                     <!-- <td> Calculate duration here if needed, maybe via templatetag </td> -->
-                                     {% else %}<td>-</td>{% endif %} #}
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                  {% else %}
-                     <p class="mt-3 alert alert-warning">No specific log entries matched these criteria (but the total duration was calculated).</p>
+                     {# This part might not be reachable if total_hours > 0 but filtered_logs is empty, depends on view logic #}
+                     <p class="mt-3 alert alert-warning">No specific log entries matched these criteria for display (but the total duration was calculated).</p>
                 {% endif %}
 
             </div>
@@ -134,7 +137,7 @@
          <div class="alert alert-warning">
              Please correct the errors in the filter form above.
          </div>
-        {% elif request.GET and form.is_valid and total_hours == 0 %}
+        {% elif request.GET and form.is_valid and total_hours == 0 and not filtered_logs %} {# Adjusted condition slightly #}
            <div class="alert alert-info">
                 No duty logs with recorded finish times matched the specified criteria within the date range. Total duration is 0 hours.
                 <br><br>
@@ -154,4 +157,5 @@
 
     </div>
 </div>
+<br><br><br>
 {% endblock %}
