@@ -1,20 +1,22 @@
 # duty_hour_log/views.py
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import DutyHourLog, Initial # Import Initial
+from .models import DutyHourLog, Initial
 from .forms import DutyHourLogForm, ReportFilterForm 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from django.core.paginator import Paginator
 from django.contrib import messages
-from django.http import JsonResponse # For AJAX view
-from django.views.decorators.http import require_POST # To ensure POST for save
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_POST, require_GET  # To ensure POST for save
 from django.template.loader import render_to_string # To render the static row
 import json # To parse request body
-from django.views.decorators.http import require_POST
 from django.core.exceptions import ValidationError
 from django.utils.dateparse import parse_time
 from django.db.models import F, ExpressionWrapper, DurationField, Sum, Q
 from django.utils import timezone
 from datetime import datetime
+import openpyxl # For Excel export
+from .utils import format_timedelta_to_hhmm
+from django.urls import reverse
 
 
 # List View (Read - All) - Modified for Inline Add
@@ -116,7 +118,7 @@ def update_inline_log(request, pk):
     try:
         data = json.loads(request.body)
         new_finish_time_str = data.get('finish_time', '').strip()
-        new_remarks = data.get('remarks', log_instance.remarks or '').strip() # Default to existing if not provided
+        new_remarks = data.get('remarks', log_instance.remarks or '').strip()
 
         # --- Validation ---
         errors = {}
@@ -172,11 +174,14 @@ def report_view(request):
 
         # Store submitted filters for display
         submitted_filters = {
-            'start_date': start_date,
-            'end_date': end_date,
-            'initial': initial.code if initial else 'Any',
-            'op': op if op else 'Any',
-            'rating': rating if rating else 'Any',
+            'start_date': start_date.isoformat(), # Correct
+            'end_date': end_date.isoformat(),     # Correct
+            'initial': initial.id if initial else '', # PASS ID OR EMPTY STRING - Correct
+            'initial_code': initial.code if initial else 'Any', # For display
+            'op': op if op else '', # PASS VALUE OR EMPTY STRING - Correct
+            'op_display': dict(DutyHourLog.OP_CHOICES).get(op, 'Any') if op else 'Any', # For display
+            'rating': rating if rating else '', # PASS VALUE OR EMPTY STRING - Correct
+            'rating_display': dict(DutyHourLog.RATING_CHOICES).get(rating, 'Any') if rating else 'Any', # For display
         }
 
         # Base query: within date range and MUST have finish_time
@@ -251,3 +256,91 @@ def report_view(request):
         'has_results': total_duration_timedelta is not None and form.is_valid(),
     }
     return render(request, 'duty_hour_log/report.html', context)
+
+@require_GET # Only allow GET requests for export
+def export_report_to_excel(request):
+    print(f"--- export_report_to_excel called ---") # DEBUG
+    print(f"Request GET data: {request.GET}")      # DEBUG
+
+    # Explicitly use request.GET, None is less common here
+    form = ReportFilterForm(request.GET)
+
+    if form.is_valid():
+        print("Form IS valid. Proceeding with Excel generation.") # DEBUG
+        start_date = form.cleaned_data['start_date']
+        end_date = form.cleaned_data['end_date']
+        initial = form.cleaned_data['initial']
+        op = form.cleaned_data['op']
+        rating = form.cleaned_data['rating']
+
+        # --- Re-apply the *exact same* filtering logic ---
+        # ... (filtering logic remains the same) ...
+        logs_query = DutyHourLog.objects.filter(
+            date__range=[start_date, end_date],
+            finish_time__isnull=False
+        ).select_related('initial', 'trainee', 'ojti', 'examiner').order_by('date', 'start_time')
+
+        if initial:
+            logs_query = logs_query.filter(
+                Q(initial=initial) | Q(trainee=initial) | Q(ojti=initial) | Q(examiner=initial)
+            )
+        if op:
+            logs_query = logs_query.filter(op=op)
+        if rating:
+            logs_query = logs_query.filter(rating=rating)
+
+        # ... (Excel generation logic remains the same) ...
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Duty Log Report"
+        headers = [
+            "Date", "Start Time", "Finish Time", "Duration (HH:MM)",
+            "Operation Type", "Rating", "Initial (Solo)", "Trainee", "OJTI", "Examiner",
+            "Remarks"
+        ]
+        ws.append(headers)
+        for log in logs_query:
+            duration = log.calculate_duration()
+            duration_str = format_timedelta_to_hhmm(duration) if duration else "-"
+            row_data = [
+                log.date, log.start_time, log.finish_time, duration_str,
+                log.get_op_display(), log.get_rating_display(),
+                log.initial.code if log.initial else "-",
+                log.trainee.code if log.trainee else "-",
+                log.ojti.code if log.ojti else "-",
+                log.examiner.code if log.examiner else "-",
+                log.remarks if log.remarks else ""
+            ]
+            ws.append(row_data)
+            ws.cell(row=ws.max_row, column=1).number_format = 'YYYY-MM-DD'
+            ws.cell(row=ws.max_row, column=2).number_format = 'HH:MM'
+            ws.cell(row=ws.max_row, column=3).number_format = 'HH:MM'
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        filename = f"duty_log_report_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        wb.save(response)
+        print("Excel response prepared and returned.") # DEBUG
+        return response
+
+    else:
+        # Form is invalid
+        print(f"Form IS INVALID.") # DEBUG
+        print(f"Form errors: {form.errors.as_json()}") # DEBUG: Keep this for detailed JSON errors
+
+        # Construct a simpler error message for display
+        error_details = []
+        for field, errors in form.errors.items():
+            # errors is likely an ErrorList, join its messages
+            error_details.append(f"{field.replace('_',' ').title()}: {'. '.join(errors)}")
+
+        error_msg = f"Invalid filters provided for export. Please check report filters. Details: {'; '.join(error_details)}"
+        messages.error(request, error_msg)
+
+        # Redirect back to report page, maybe preserving original params
+        original_query_string = request.GET.urlencode()
+        redirect_url = f"{reverse('report_view')}?{original_query_string}"
+        print(f"Redirecting to: {redirect_url}") # DEBUG
+        return redirect(redirect_url)

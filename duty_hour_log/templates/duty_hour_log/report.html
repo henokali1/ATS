@@ -1,6 +1,6 @@
-<!-- duty_hour_log/templates/duty_hour_log/report.html -->
 {% extends 'duty_hour_log/base.html' %}
-{% load duration_tags %} {# <<< LOAD THE CUSTOM TAGS #}
+{% comment %} duty_hour_log/templates/duty_hour_log/report.html {% endcomment %}
+{% load duration_tags %} {# Load custom tags for duration formatting #}
 
 {% block title %}Duty Log Report{% endblock %}
 
@@ -9,16 +9,17 @@
     <div class="col-lg-10 offset-lg-1">
         <h2 class="mb-4"><i class="fas fa-chart-bar"></i> Duty Log Report Generator</h2>
 
-        {# --- Filter Form Card (no changes needed here) --- #}
+        {# --- Filter Form Card --- #}
         <div class="card mb-4">
-           <!-- ... filter form ... -->
             <div class="card-header">
                 <i class="fas fa-filter"></i> Report Filters
             </div>
             <div class="card-body">
-                {# Use GET method so filters stay in URL #}
+                {# Use GET method so filters stay in URL for bookmarking/sharing/exporting #}
                 <form method="get" action="{% url 'report_view' %}">
+                    {% csrf_token %} {# Although GET, CSRF can be good practice if modifying later #}
                     <div class="row g-3 align-items-end">
+                        {# Date Filters #}
                         <div class="col-md-3">
                             {{ form.start_date.label_tag }}
                             {{ form.start_date }}
@@ -29,6 +30,8 @@
                             {{ form.end_date }}
                             {% if form.end_date.errors %}<div class="invalid-feedback d-block">{{ form.end_date.errors|join:", " }}</div>{% endif %}
                         </div>
+
+                        {# Dropdown Filters #}
                          <div class="col-md-3">
                             {{ form.initial.label_tag }}
                             {{ form.initial }}
@@ -45,18 +48,22 @@
                             {% if form.rating.errors %}<div class="invalid-feedback d-block">{{ form.rating.errors|join:", " }}</div>{% endif %}
                         </div>
 
+                        {# Submit Button #}
                         <div class="col-md-3">
                             <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i> Generate Report</button>
                         </div>
+
+                         {# Non-field Errors (e.g., validation across fields) #}
                          {% if form.non_field_errors %}
                             <div class="col-12 text-danger mt-2">
                                 {{ form.non_field_errors }}
                             </div>
-                        {% endif %}
-                         {# Display clean errors like end_date < start_date #}
+                         {% endif %}
+
+                         {# Specific cross-field errors like end_date < start_date #}
                          {% if form.errors and not form.non_field_errors %}
                              {% for field, errors in form.errors.items %}
-                                 {% if field == '__all__' %}
+                                 {% if field == '__all__' %} {# Catch errors raised in clean() without specific field #}
                                  <div class="col-12 text-danger mt-2">
                                     {{ errors|join:", " }}
                                  </div>
@@ -64,47 +71,62 @@
                              {% endfor %}
                          {% endif %}
                     </div>
+                    {# Help text for Initial field #}
                     {% if form.initial.help_text %}
                         <small class="form-text text-muted d-block mt-2">{{ form.initial.help_text }}</small>
                     {% endif %}
                 </form>
-            </div>
-        </div>
+            </div> {# End card-body #}
+        </div> {# End filter card #}
 
 
+        {# --- Results Section --- #}
         {% if has_results %}
         <div class="card border-success">
-            <div class="card-header bg-success text-white">
-                 <i class="fas fa-check-circle"></i> Report Results
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                 <span><i class="fas fa-check-circle"></i> Report Results</span>
+                 {# --- EXPORT BUTTON --- #}
+                 {# Pass current filters via query string using submitted_filters context #}
+                 {% if submitted_filters %}
+                 <a href="{% url 'export_report_excel' %}?start_date={{ submitted_filters.start_date|urlencode }}&end_date={{ submitted_filters.end_date|urlencode }}&initial={{ submitted_filters.initial|urlencode }}&op={{ submitted_filters.op|urlencode }}&rating={{ submitted_filters.rating|urlencode }}"
+                 class="btn btn-light btn-sm"
+                 role="button"
+                 title="Export the detailed logs below to Excel">
+                 <i class="fas fa-file-excel"></i> Export to Excel
+              </a>
+                 {% endif %}
+                 {# --- END EXPORT BUTTON --- #}
             </div>
             <div class="card-body">
                 <h5 class="card-title">Summary</h5>
                 <p>Based on the following filters:</p>
                 <ul>
+                    {# Use display versions from submitted_filters context for clarity #}
                     <li><strong>Date Range:</strong> {{ submitted_filters.start_date|date:"Y-m-d" }} to {{ submitted_filters.end_date|date:"Y-m-d" }}</li>
-                    <li><strong>Initial:</strong> {{ submitted_filters.initial }}</li>
-                    <li><strong>Operation Type:</strong> {{ submitted_filters.op }}</li>
-                    <li><strong>Rating:</strong> {{ submitted_filters.rating }}</li>
+                    <li><strong>Initial:</strong> {{ submitted_filters.initial_code }}</li>
+                    <li><strong>Operation Type:</strong> {{ submitted_filters.op_display }}</li>
+                    <li><strong>Rating:</strong> {{ submitted_filters.rating_display }}</li>
                 </ul>
                 <hr>
-                <h4>Total Duration: <span class="badge bg-primary">{{ total_hours|floatformat:2 }} hours</span></h4>
+                <h4>Total Duration: <span class="badge bg-primary fs-5">{{ total_hours|floatformat:2 }} hours</span></h4>
 
                 {% if filtered_logs %}
                     <h5 class="mt-4">Matching Log Entries ({{ filtered_logs.count }})</h5>
                      <div class="table-responsive mt-3" style="max-height: 400px; overflow-y: auto;">
                         <table class="table table-sm table-striped table-bordered small">
-                            <thead class="table-light sticky-top"> {# Added sticky-top for header #}
+                             <thead class="table-light sticky-top"> {# Header sticks when scrolling #}
                                 <tr>
                                     <th>Date</th>
                                     <th>Start</th>
                                     <th>Finish</th>
-                                    <th>Duration</th> {# <<< NEW HEADER #}
+                                    <th>Duration</th> {# Calculated Duration #}
                                     <th>Op</th>
                                     <th>Rating</th>
                                     <th>Initial</th>
                                     <th>Trainee</th>
                                     <th>OJTI</th>
                                     <th>Examiner</th>
+                                    <th>Remarks</th> {# Added Remarks #}
                                 </tr>
                             </thead>
                             <tbody>
@@ -113,7 +135,7 @@
                                     <td>{{ log.date|date:"Y-m-d" }}</td>
                                     <td>{{ log.start_time|time:"H:i" }}</td>
                                     <td>{{ log.finish_time|time:"H:i"|default:"-" }}</td>
-                                    {# <<< USE MODEL METHOD AND FILTER >>> #}
+                                    {# Use model method and format_duration filter #}
                                     <td>{{ log.calculate_duration|format_duration }}</td>
                                     <td>{{ log.get_op_display }}</td>
                                     <td>{{ log.get_rating_display }}</td>
@@ -121,41 +143,44 @@
                                     <td>{{ log.trainee.code|default:"-" }}</td>
                                     <td>{{ log.ojti.code|default:"-" }}</td>
                                     <td>{{ log.examiner.code|default:"-" }}</td>
+                                    {# Display remarks, truncated for table view #}
+                                    <td title="{{ log.remarks|default:"" }}">{{ log.remarks|default:""|truncatechars:50 }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
                  {% else %}
-                     {# This part might not be reachable if total_hours > 0 but filtered_logs is empty, depends on view logic #}
-                     <p class="mt-3 alert alert-warning">No specific log entries matched these criteria for display (but the total duration was calculated).</p>
-                {% endif %}
+                     {# This might occur if total_hours > 0 but something prevents logs display #}
+                     <p class="mt-3 alert alert-warning">No specific log entries are available for display (but the total duration was calculated).</p>
+                {% endif %} {# End if filtered_logs #}
 
-            </div>
-        </div>
-        {% elif request.GET and not form.is_valid %}
+            </div> {# End card-body #}
+        </div> {# End results card #}
+
+        {# --- Alternative states based on form submission and results --- #}
+        {% elif request.GET and not form.is_valid %} {# Submitted but form has errors #}
          <div class="alert alert-warning">
              Please correct the errors in the filter form above.
          </div>
-        {% elif request.GET and form.is_valid and total_hours == 0 and not filtered_logs %} {# Adjusted condition slightly #}
+        {% elif request.GET and form.is_valid and total_hours == 0 and not filtered_logs %} {# Submitted, valid, but zero results #}
            <div class="alert alert-info">
                 No duty logs with recorded finish times matched the specified criteria within the date range. Total duration is 0 hours.
                 <br><br>
                  <p>Filters applied:</p>
                 <ul>
                     <li><strong>Date Range:</strong> {{ submitted_filters.start_date|date:"Y-m-d" }} to {{ submitted_filters.end_date|date:"Y-m-d" }}</li>
-                    <li><strong>Initial:</strong> {{ submitted_filters.initial }}</li>
-                    <li><strong>Operation Type:</strong> {{ submitted_filters.op }}</li>
-                    <li><strong>Rating:</strong> {{ submitted_filters.rating }}</li>
+                    <li><strong>Initial:</strong> {{ submitted_filters.initial_code }}</li>
+                    <li><strong>Operation Type:</strong> {{ submitted_filters.op_display }}</li>
+                    <li><strong>Rating:</strong> {{ submitted_filters.rating_display }}</li>
                 </ul>
             </div>
-        {% elif not request.GET %}
+        {% elif not request.GET %} {# Initial page load, no submission yet #}
             <div class="alert alert-secondary">
                 Please select filters and click "Generate Report".
             </div>
-        {% endif %}
+        {% endif %} {# End main conditional block #}
 
-    </div>
-</div>
-<br><br><br>
+    </div> {# End col #}
+</div> {# End row #}
 {% endblock %}

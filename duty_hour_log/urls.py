@@ -13,4 +13,5 @@ urlpatterns = [
     path('<int:pk>/edit/', views.log_update, name='log_update'), # Keep standard edit page
     path('<int:pk>/delete/', views.log_delete, name='log_delete'),
     path('report/', views.report_view, name='report_view'),
+    path('report/export/', views.export_report_to_excel, name='export_report_excel'),
 ]
