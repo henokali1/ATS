@@ -46,6 +46,8 @@ def log_list(request):
 def save_inline_log(request):
     try:
         data = json.loads(request.body)
+        print("--- save_inline_log RECEIVED DATA ---") # <<< ADD
+        print(data)                      
     except json.JSONDecodeError:
         return JsonResponse({'status': 'error', 'errors': {'__all__': ['Invalid request format.']}}, status=400)
 
@@ -53,8 +55,10 @@ def save_inline_log(request):
     form = DutyHourLogForm(data)
 
     if form.is_valid():
+        print("--- save_inline_log FORM IS VALID ---") # <<< ADD
         try:
             new_log = form.save()
+            print(f"--- save_inline_log SAVED LOG REMARKS: '{new_log.remarks}' ---") #
             # Render the static row HTML to send back to the client
             row_html = render_to_string(
                 'duty_hour_log/partials/log_table_row_static.html', # A new partial template
@@ -67,9 +71,12 @@ def save_inline_log(request):
             })
         except Exception as e:
             # Catch potential database errors during save
+            print(f"--- save_inline_log SAVE EXCEPTION: {e} ---") # <<< ADD
             return JsonResponse({'status': 'error', 'errors': {'__all__': [f'Error saving log: {e}']}}, status=500)
     else:
         # Form is invalid, return errors
+        print("--- save_inline_log FORM IS INVALID ---") # <<< ADD
+        print(form.errors.as_json())                   # <<< ADD
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 

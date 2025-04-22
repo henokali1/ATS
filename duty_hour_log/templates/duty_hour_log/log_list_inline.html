@@ -411,8 +411,7 @@
             if (!saveBtn) return;
             saveBtn.disabled = true;
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
-            console.log("saveNewRowData: Sending data:", formData);
-
+            console.log("saveNewRowData: Sending data:", formData); 
             fetch(SAVE_URL, { /* ... AJAX ... */
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
@@ -429,7 +428,7 @@
                     const staticRow = tempDiv.firstChild;
                     row.replaceWith(staticRow);
                     enableOtherButtons();
-                    location.reload();
+                    // location.reload();
                 } else {
                     showErrors(body.errors || { '__all__': ['Save failed.'] }, row);
                     saveBtn.disabled = false;
